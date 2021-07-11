@@ -29,8 +29,6 @@ R# Table of contents
 ## Software Used
 
 
-
-
 | Program | Version | Relevant Links |
 | - | - | - |
 | Cellranger | 6.0.2 | https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger |
@@ -67,22 +65,22 @@ This command only has one parameter:
 * `--attribute` – Use this command multiple times to filter our genes. An example is below.
 
 > **
-> --attribute=gene_biotype:protein_coding 
-> --attribute=gene_biotype:lincRNA 
-> --attribute=gene_biotype:antisense 
-> --attribute=gene_biotype:IG_LV_gene 
-> --attribute=gene_biotype:IG_V_gene 
-> --attribute=gene_biotype:IG_V_pseudogene 
-> --attribute=gene_biotype:IG_D_gene 
-> --attribute=gene_biotype:IG_J_gene 
-> --attribute=gene_biotype:IG_J_pseudogene 
-> --attribute=gene_biotype:IG_C_gene 
-> --attribute=gene_biotype:IG_C_pseudogene 
-> --attribute=gene_biotype:TR_V_gene 
-> --attribute=gene_biotype:TR_V_pseudogene 
-> --attribute=gene_biotype:TR_D_gene 
-> --attribute=gene_biotype:TR_J_gene 
-> --attribute=gene_biotype:TR_J_pseudogene 
+> --attribute=gene_biotype:protein_coding
+> --attribute=gene_biotype:lincRNA
+> --attribute=gene_biotype:antisense
+> --attribute=gene_biotype:IG_LV_gene
+> --attribute=gene_biotype:IG_V_gene
+> --attribute=gene_biotype:IG_V_pseudogene
+> --attribute=gene_biotype:IG_D_gene
+> --attribute=gene_biotype:IG_J_gene
+> --attribute=gene_biotype:IG_J_pseudogene
+> --attribute=gene_biotype:IG_C_gene
+> --attribute=gene_biotype:IG_C_pseudogene
+> --attribute=gene_biotype:TR_V_gene
+> --attribute=gene_biotype:TR_V_pseudogene
+> --attribute=gene_biotype:TR_D_gene
+> --attribute=gene_biotype:TR_J_gene
+> --attribute=gene_biotype:TR_J_pseudogene
 > --attribute=gene_biotype:TR_C_gene
 > **
 
@@ -142,11 +140,9 @@ sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.top
 
 We now have a folder called Arabidopsis which is our reference transcriptome.
 
-
 # 2. Cellranger Counts Setup
 
 Our next step will be to make a counts matrix of our dataset.
-
 
 ## 2a Datasets
 
@@ -173,7 +169,6 @@ If downloading a dataset from NCBI using SRA, then please first check if the dat
 
 A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions::
 
->
 > SRR IDs are run accessions, and the fastq files will normally have 2 fastq files, a read1 and a read 2.
 >
 > SRX IDS are experiment accessions, and they correspond to the libraries in cellranger.
@@ -181,7 +176,6 @@ A quick explanation of how SRA accession IDS and numbers compare to Cellrangers 
 > SRS IDs are sample accessions, and they correspond to cell samples in cellranger.
 >
 > SRP IDs are study accessions, and they can contain multiple organisms.
-
 
 .SRA files downloaded will need to be extracted into fastq files using this function from SRA toolkit:
 
@@ -198,26 +192,25 @@ These will need to be renamed as shown above.
 
 The final file structure for the fastq files will look like below (this is for Arabidopsis):
 
-Arabidopsis_dataset
-.
-├── SRR13040579_S1_L001_R1_001.fastq.gz
-├── SRR13040579_S1_L001_R2_001.fastq.gz
-├── SRR13040580_S1_L001_R1_001.fastq.gz
-├── SRR13040580_S1_L001_R2_001.fastq.gz
-├── SRR13040581_S1_L001_R1_001.fastq.gz
-├── SRR13040581_S1_L001_R2_001.fastq.gz
-├── SRR13040582_S1_L001_R1_001.fastq.gz
-├── SRR13040582_S1_L001_R2_001.fastq.gz
-├── SRR13040583_S1_L001_R1_001.fastq.gz
-├── SRR13040583_S1_L001_R2_001.fastq.gz
-├── SRR13040584_S1_L001_R1_001.fastq.gz
-├── SRR13040584_S1_L001_R2_001.fastq.gz
-├── SRR13040585_S1_L001_R1_001.fastq.gz
-├── SRR13040585_S1_L001_R2_001.fastq.gz
-├── SRR13040586_S1_L001_R1_001.fastq.gz
-└── SRR13040586_S1_L001_R2_001.fastq.gz
+> Arabidopsis_dataset
+> .
+> ├── SRR13040579_S1_L001_R1_001.fastq.gz
+> ├── SRR13040579_S1_L001_R2_001.fastq.gz
+> ├── SRR13040580_S1_L001_R1_001.fastq.gz
+> ├── SRR13040580_S1_L001_R2_001.fastq.gz
+> ├── SRR13040581_S1_L001_R1_001.fastq.gz
+> ├── SRR13040581_S1_L001_R2_001.fastq.gz
+> ├── SRR13040582_S1_L001_R1_001.fastq.gz
+> ├── SRR13040582_S1_L001_R2_001.fastq.gz
+> ├── SRR13040583_S1_L001_R1_001.fastq.gz
+> ├── SRR13040583_S1_L001_R2_001.fastq.gz
+> ├── SRR13040584_S1_L001_R1_001.fastq.gz
+> ├── SRR13040584_S1_L001_R2_001.fastq.gz
+> ├── SRR13040585_S1_L001_R1_001.fastq.gz
+> ├── SRR13040585_S1_L001_R2_001.fastq.gz
+> ├── SRR13040586_S1_L001_R1_001.fastq.gz
+> └── SRR13040586_S1_L001_R2_001.fastq.gz
 
---
 
 ## 2b Cellranger Counts
 
