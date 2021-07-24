@@ -51,19 +51,9 @@ These will be default numbers if the user does not change these inputs. Much of 
 #User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
 n=-1                    #Initialized later
 cluster_res = 1.0
-min_cells = 1
-min_genes = 1
+min_cells = -1
+min_genes = -1
 genes = []
-
-#Cell ranger arguements: These are not optional
-cellranger_script =""
-string_id=""
-reference_transcriptome=""
-fastqs=""
-sample=""
-expected_cells=0
-local_cores=0
-local_mem=0
 
 #SCSA arguments
 species = "Human"
@@ -76,22 +66,11 @@ interrupt=True
 
 """Command line argument syntax"""
 #Scanpy
-batch_arg = "--batch"
 n_arg = "--neighbors"
 resoution_arg = "--res"
 cell_arg = "--min_cells"
 gene_arg = "--min_genes"
 display_arg = "--genes"
-
-#Cellranger: These are not optional
-cellranger_script_arg = "--script"
-string_id_arg = "--id"
-reference_transcriptome_arg = "--transcriptome"
-fastqs_arg = "--fastqs"
-sample_arg = "--sample"
-expected_cells_arg = "--min_genes"
-local_cores_arg = "--cores"
-local_mem_arg = "--mem"
 
 #SCSA
 species_arg = "--species"
@@ -99,15 +78,18 @@ tissie_arg = "--tissue"
 
 #Other
 disable_interrupt_arg = "-disable_interrupts"
-skip_cellranger_arg = "-skip_cellranger"
-file_path_arg = "--filepath"        #Required if skipping cell ranger
+file_path_arg = "--filepath"
 
 
 """Parse arguments"""
 args = sys.argv[1:]
 for arg in args:
-    if batch_arg+"=" in arg:
-        batch_effect = arg[arg.index("=") + 1:]
+    #Required
+    if file_path_arg in arg:
+        file_path = arg[arg.index("=") + 1:]
+        if file_path[-1] != "/" or file_path[-1] != "\\": file_path += "/"
+
+    #ScanPy arguments
     elif n_arg+"=" in arg:
         n = int(arg[arg.index("=") + 1:])
     elif resoution_arg+"=" in arg:
@@ -116,24 +98,8 @@ for arg in args:
         min_cells = float(arg[arg.index("=") + 1:])
     elif gene_arg+"=" in arg:
         min_genes = float(arg[arg.index("=") + 1:])
-
-    #Cell ranger arguments
-    elif cellranger_script_arg+"=" in arg:
-        cellranger_script = arg[arg.index("=") + 1:]
-    elif string_id_arg+"=" in arg:
-        string_id = arg[arg.index("=") + 1:]
-    elif reference_transcriptome_arg+"=" in arg:
-        reference_transcriptome = arg[arg.index("=") + 1:]
-    elif fastqs_arg+"=" in arg:
-        fastqs = arg[arg.index("=") + 1:]
-    elif sample_arg+"=" in arg:
-        sample = arg[arg.index("=") + 1:]
-    elif expected_cells_arg+"=" in arg:
-        expected_cells = float(arg[arg.index("=") + 1:])
-    elif local_cores_arg+"=" in arg:
-        local_cores = float(arg[arg.index("=") + 1:])
-    elif local_mem_arg+"=" in arg:
-        local_mem = float(arg[arg.index("=") + 1:])
+    elif display_arg+"=" in arg:                 #Genes listed must be comma separated
+        genes = arg[arg.index("=") + 1:].split(",")
 
     #SCSA
     elif species_arg+"=" in arg:
@@ -142,45 +108,26 @@ for arg in args:
         tissue = arg[arg.index("=") + 1:]
 
     #Other
-    elif file_path_arg in arg:
-        file_path = arg[arg.index("=") + 1:]
-        if file_path[-1] != "/" or file_path[-1] != "\\": file_path+="/"
     elif disable_interrupt_arg in arg:
         interrupt = False
-    elif skip_cellranger_arg in arg:
-        skip_cellranger = True
-    elif display_arg+"=" in arg:                 #Genes listed must be comma separated
-        genes = arg[arg.index("=") + 1:].split(",")
     else:
         sys.exit(arg+" is not a valid argument!")
 
-"""Run cell ranger
-Run the cell ranger using the passed arguments. Let program crash naturally if missing arguments or errors occur. 
-Program continues only once process finishes.
-
-Cellranger outputs a features.tsv file, a barcode file, and the matrix file. 
-Features are the genes, barcode are the cells, and the matrix is the actual data. 
-Anndata is a Scanpy object that can hold all these important variables and data.
-"""
-
-if (not skip_cellranger) and os.path.isfile(file_path+"matrix.mtx.gz") and os.path.isfile(file_path+"features.tsv.gz") and os.path.isfile(file_path+"barcodes.tsv.gz"):
-    while True:
-        run_prompt = input("Cell ranger has already be run on this file path. Would you like to run it again? [y/n]")
-        if run_prompt == 'y' or run_prompt == 'Y':
-            break
-        elif run_prompt =='n' or run_prompt == 'N':
-            skip_cellranger = True
-            break
-if not skip_cellranger:
-    if not os.path.exists(string_id):
-        os.mkdir(string_id)
-    file_path = string_id + "/outs/filtered_features_bc_matrix/"        #Reset file_path if passed
-    subprocess.run(["sbatch", cellranger_script, string_id, reference_transcriptome, fastqs, sample, expected_cells, local_cores, local_mem])
-
-
-
 """Load data"""
-adata = sc.read_10x_mtx(file_path)
+if file_path == "":             #File path is required!
+    raise FileExistsError("You must input a file path of the cell ranger output!")
+
+#If filepath points directly to data or to cellranger output
+if os.path.isfile(file_path+"matrix.mtx.gz") and os.path.isfile(file_path+"features.tsv.gz") and os.path.isfile(file_path+"barcodes.tsv.gz"):
+    adata = sc.read_10x_mtx(file_path)
+else:
+    if "/outs" in file_path:                                                                         #File path points to other paths within cellranger output
+        file_path = file_path[:file_path.index("outs")]
+    if not os.path.exists(file_path+"outs/filtered_feature_bc_matrix/"):                             #Corrupted cellranger output (that isn't pointed to data)
+        raise FileExistsError(file_path+"outs/filtered_feature_bc_matrix/ is missing in cell ranger output!")
+    if not (os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/matrix.mtx.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/features.tsv.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/barcodes.tsv.gz")):
+        raise FileNotFoundError("One or more of the following files in "+file_path+"outs/filtered_feature_bc_matrix/ is missing: matrix.mtx.gz, features.tsv.gz, barcodes.tsv.gz")   #Missing files in filepath
+    adata = sc.read_10x_mtx(file_path+"outs/filtered_feature_bc_matrix/")
 
 #Initialize n now that data length is defined
 if n == -1:
@@ -279,7 +226,10 @@ if interrupt:
     #Collect user input for the minimum amount of genes to filter cells. Can be left blank if arguments already given or for default parameters.
     while True:
       try:
-        g_value = input("Input min_genes threshold or leave blank to use \'"+str(min_genes)+"\': ")
+        min_gene_text = min_genes
+        if min_gene_text == -1:
+            min_gene_text = "default settings"
+        g_value = input("Input min_genes threshold or leave blank to use \'"+str(min_gene_text)+"\': ")
         if g_value == "": break
         min_genes = int(g_value)
         break
@@ -302,7 +252,10 @@ if interrupt:
     #Collect user input for the minimum amount of cells to filter genes. Can be left blank if arguments already given or for default parameters.
     while True:
       try:
-        c_value = input("Input min_cells threshold or leave blank to use \'"+str(min_cells)+"\': ")
+        min_cell_text = min_cells
+        if min_cell_text == -1:
+            min_cell_text = "default settings"
+        c_value = input("Input min_cells threshold or leave blank to use \'"+str(min_cell_text)+"\': ")
         if c_value == "": break
         min_cells = int(c_value)
         break
@@ -316,11 +269,12 @@ The minimum number of cells for filtering genes is instead going to be percentil
 unfiltered_genes = adata.var_names
 cell_filter_percentile = 0.01
 
-if min_cells == 1 and min_genes == 1:             #Percentile-based filtering (default)
+if min_cells == -1 and min_genes == -1:             #Percentile-based filtering (default)
   print("Filtering using default settings.")
   stats = sc.pp.calculate_qc_metrics(adata)
   gene_counts_mean = len(stats[0]['n_genes_by_counts'])
   min_genes = round(gene_counts_mean*cell_filter_percentile)
+  min_cells = 1
 
 print("Filtering using min_genes="+str(int(min_genes))+" and min_cells="+str(int(min_cells))+".")
 sc.pp.filter_cells(adata, min_genes = min_genes)
@@ -387,7 +341,7 @@ if interrupt:
 #Repeat the previous steps and allow user to adjust cluster resolution until satisifed.
 while interrupt:
     try:
-        prompt = input("Enter a decimal to change the cluster resolution (1.0 is the default) or leave blank to keep the results: ")
+        prompt = input("Enter a decimal to change the cluster resolution (current: "+str(cluster_res)+") or leave blank to keep the results: ")
         if prompt == "": break
         cluster_res = float(prompt)
         sc.tl.leiden(adata, resolution=cluster_res)
@@ -498,7 +452,7 @@ while interrupt:
     print("\n*View the output.xlsx file. \n*If you are not satisfied with the results, use this opportunity to adjust the cluster resolution and re-annotate the data.")
     while interrupt:
         try:
-            prompt = input("Enter a decimal to change the cluster resolution. Leave blank to keep the results. Enter 'exit' to exit: ")
+            prompt = input("Enter a decimal to change the cluster resolution. Leave blank to keep the resolution. Enter 'exit' to exit: ")
             if prompt == "" or prompt == "exit": break
             cluster_res = float(prompt)
             sc.tl.leiden(adata, resolution=cluster_res)
