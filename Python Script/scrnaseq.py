@@ -11,12 +11,14 @@ while True:
         print("Loading packages...")
         import sys
         import os
+        import subprocess
+
         import numpy as np
         import pandas as pd
         import scanpy as sc
         import seaborn as sb
         import matplotlib.pyplot as plt
-        import subprocess
+        import scorect_api as ct
         break
     except:
         print("***Some packages have not been installed. Installing now...***")
@@ -28,12 +30,18 @@ while True:
             urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
             remove = True
         subprocess.check_call([sys.executable, "get-pip.py"])
+
         # Download and install packages if not installed
         subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+
+        if not os.path.exists("scorect_api.py"):
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
+            # Required by scorect_api
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
 
         # Packages used but not included in scanpy package
         subprocess.check_call([sys.executable, "-m", "pip", "install", "harmonypy"])
@@ -43,6 +51,7 @@ while True:
         # Remove installer if it wasn't available before for discretion
         if remove: os.remove("get-pip.py")
 print("Package import success!")
+input()
 
 """Variables
 These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
@@ -55,13 +64,15 @@ min_cells = -1
 min_genes = -1
 genes = []
 
-#SCSA arguments
-species = "Human"
-tissue = "All"      #SCSA's default parameter
+#Annotation arguments
+species = ""
+tissue = ""
+K = 350
+m = 15
 
 #Other arguments
-skip_cellranger = False
 file_path = ""
+markers_path = ""
 interrupt=True
 
 """Command line argument syntax"""
@@ -72,13 +83,16 @@ cell_arg = "--min_cells"
 gene_arg = "--min_genes"
 display_arg = "--genes"
 
-#SCSA
+#Annotation
 species_arg = "--species"
 tissie_arg = "--tissue"
+K_arg = "--K"
+m_arg = "--bins"
 
 #Other
-disable_interrupt_arg = "-disable_interrupts"
 file_path_arg = "--filepath"
+markers_path_arg = "--markers"
+disable_interrupt_arg = "-disable_interrupts"
 
 
 """Parse arguments"""
@@ -101,11 +115,18 @@ for arg in args:
     elif display_arg+"=" in arg:                 #Genes listed must be comma separated
         genes = arg[arg.index("=") + 1:].split(",")
 
-    #SCSA
+    #Annotation
     elif species_arg+"=" in arg:
         species = arg[arg.index("=") + 1:]
     elif tissie_arg+"=" in arg:
         tissue = arg[arg.index("=") + 1:]
+    elif K_arg+"=" in arg:
+        K = float(arg[arg.index("=") + 1:])
+    elif m_arg+"=" in arg:
+        m = float(arg[arg.index("=") + 1:])
+    if markers_path_arg in arg:
+        markers_path = arg[arg.index("=") + 1:]
+        if markers_path[-1] != "/" or markers_path[-1] != "\\": markers_path += "/"
 
     #Other
     elif disable_interrupt_arg in arg:
@@ -128,10 +149,6 @@ else:
     if not (os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/matrix.mtx.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/features.tsv.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/barcodes.tsv.gz")):
         raise FileNotFoundError("One or more of the following files in "+file_path+"outs/filtered_feature_bc_matrix/ is missing: matrix.mtx.gz, features.tsv.gz, barcodes.tsv.gz")   #Missing files in filepath
     adata = sc.read_10x_mtx(file_path+"outs/filtered_feature_bc_matrix/")
-
-#Initialize n now that data length is defined
-if n == -1:
-  n = round(np.sqrt(adata.n_obs))
 
 """Overview Data"""
 print("Number of cells: "+str(adata.n_obs))
@@ -269,6 +286,7 @@ The minimum number of cells for filtering genes is instead going to be percentil
 unfiltered_genes = adata.var_names
 cell_filter_percentile = 0.01
 
+prefiltered_length = adata.n_vars
 if min_cells == -1 and min_genes == -1:             #Percentile-based filtering (default)
   print("Filtering using default settings.")
   stats = sc.pp.calculate_qc_metrics(adata)
@@ -281,8 +299,7 @@ sc.pp.filter_cells(adata, min_genes = min_genes)
 sc.pp.filter_genes(adata, min_cells = min_cells)
 
 #Display filtering results
-filtered_genes = np.setdiff1d(unfiltered_genes, adata.var_names)    #This will also be used later
-print(str(len(filtered_genes))+" genes filtered")
+print(str(adata.n_vars)+"/"+str(prefiltered_length)+" genes filtered")
 
 """Normalize and Logarithmize Data
 Normalization will help to preserve biological heterogeneity without the influence of any technical noise like sequencing depth and gene abundance.
@@ -305,7 +322,6 @@ If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th p
 (Decribed in the 'Identification of highly variable genes.' section of https://www.nature.com/articles/nbt.3192)
 """
 sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
-highly_variable = adata[:, adata.var.highly_variable==True].var_names
 print(str(len(adata.var[adata.var['highly_variable']==True]))+"/"+str(adata.n_vars)+" genes are highly variable and removed.")
 adata = adata[:, adata.var.highly_variable==False]
 
@@ -319,6 +335,10 @@ https://towardsdatascience.com/how-to-find-the-optimal-value-of-k-in-knn-35d936e
 https://discuss.analyticsvidhya.com/t/how-to-choose-the-value-of-k-in-knn-algorithm/2606/7
 https://stackoverflow.com/questions/11568897/value-of-k-in-k-nearest-neighbor-algorithm
 """
+#Initialize n now that filtering has finished
+if n == -1:
+  n = round(np.sqrt(adata.n_obs))
+
 print("\n*Do not be concerned about the following warning.")
 sc.pp.neighbors(adata, n_neighbors=n)
 
@@ -365,12 +385,8 @@ if interrupt:
         for gene in genes:
             if gene in adata.var_names:
                 view_genes.append(gene)
-            elif gene in highly_variable:
-                print(gene+" gene was highly variable and was filtered out.")
-            elif gene in filtered_genes:
-                print(gene+" gene had been filtered out.")
             else:
-                print(gene+" gene does not exist in the dataset.")
+                print("\'"+gene+"\' gene is not in the dataset.")
         sc.pl.umap(adata, color=view_genes)
     else:                   #Display the first 2 gene as a sample
         view_genes = []
@@ -414,62 +430,124 @@ while True and interrupt:
         for gene in prompted_genes:
             if gene in adata.var_names:
                 view_genes.append(gene)
-            elif gene in highly_variable:
-                print("\'"+gene+"\' gene was highly variable and was filtered out.")
-            elif gene in filtered_genes:
-                print("\'"+gene+"\' gene had been filtered out.")
             else:
-                print("\'"+gene+"\' gene does not exist in the dataset.")
+                print("\'"+gene+"\' gene is not in the dataset.")
         sc.pl.umap(adata, color=view_genes)
 
 """Annotate data"""
 #Prepare data to be annotated on SCSA
-sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-result = adata.uns['rank_genes_groups']
-groups = result['names'].dtype.names
-dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges','scores','pvals']})
-dat.to_csv("adata.csv")
+#sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
+#result = adata.uns['rank_genes_groups']
+#groups = result['names'].dtype.names
+#dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges','scores','pvals']})
+#dat.to_csv("adata.csv")
 
-print("WARNING: the following can only annotate human or mice cells!")
+#print("WARNING: the following can only annotate human or mice cells!")
 
 #Prompt for species argument
-if interrupt:
-    species_prompt = input("Input species of the dataset or leave blank to use \'"+species+"\': ")
-    if not species_prompt == "":
-        species = species_prompt
+#if interrupt:
+#    species_prompt = input("Input species of the dataset or leave blank to use \'"+species+"\': ")
+#    if not species_prompt == "":
+#        species = species_prompt
 
 #Prompt for tissue argument
-    tissue_prompt = input("Input tissue of the dataset or leave blank to use \'"+tissue+"\': ")
-    if not tissue_prompt == "":
-        tissue = tissue_prompt
+#if interrupt:
+#    tissue_prompt = input("Input tissue of the dataset or leave blank to use \'"+tissue+"\': ")
+#    if not tissue_prompt == "":
+#        tissue = tissue_prompt
 
 #Run SCSA
-print("Annotating with species="+species+" and tissue="+tissue)
-subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
+#print("Annotating with species="+species+" and tissue="+tissue)
+#subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
 
 """Revisit cluster resolution"""
-while interrupt:
-    print("\n*View the output.xlsx file. \n*If you are not satisfied with the results, use this opportunity to adjust the cluster resolution and re-annotate the data.")
-    while interrupt:
-        try:
-            prompt = input("Enter a decimal to change the cluster resolution. Leave blank to keep the resolution. Enter 'exit' to exit: ")
-            if prompt == "" or prompt == "exit": break
-            cluster_res = float(prompt)
-            sc.tl.leiden(adata, resolution=cluster_res)
-            sc.tl.umap(adata)
-            sc.pl.umap(adata, color=['leiden'])
-        except:
-            print("\nYou must enter a decimal value!")
-    if prompt == "exit": break
+#while interrupt:
+#    print("\n*View the output.xlsx file. \n*If you are not satisfied with the results, use this opportunity to adjust the cluster resolution and re-annotate the data.")
+#    while interrupt:
+#        try:
+#            prompt = input("Enter a decimal to change the cluster resolution. Leave blank to keep the resolution. Enter 'exit' to exit: ")
+#            if prompt == "" or prompt == "exit": break
+#            cluster_res = float(prompt)
+#            sc.tl.leiden(adata, resolution=cluster_res)
+#            sc.tl.umap(adata)
+#            sc.pl.umap(adata, color=['leiden'])
+#        except:
+#            print("\nYou must enter a decimal value!")
+#    if prompt == "exit": break
 
-    print("Using cluster resolution of: "+str(cluster_res))
-    sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-    result = adata.uns['rank_genes_groups']
-    groups = result['names'].dtype.names
-    dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
-    dat.to_csv("adata.csv")
-
-    subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
+#    print("Using cluster resolution of: "+str(cluster_res))
+#    sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
+#    result = adata.uns['rank_genes_groups']
+#    groups = result['names'].dtype.names
+#    dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
+#   dat.to_csv("adata.csv")
+#
+#    subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
 
 """TO BE REMOVED? Reload output into program"""
-df = pd.read_excel("output.xlsx", None)
+#df = pd.read_excel("output.xlsx", None)
+
+"""Export adata to use in annotate.py"""
+adata.write("adata.h5ad")
+print("Exported data to 'adata.h5ad'. The following steps can be repeated using [SCRIPT NAME] and this program can safely exited.")
+
+"""Annotate data
+TODO DESCRIPTION
+"""
+#Load marker file
+#Allow users to use own marker gene file
+marker_loaded = False
+if not markers_path == "":
+    try:
+        ref_marker = ct.read_markers_from_file(markers_path)
+        marker_loaded = True
+    except:
+        print("Invalid marker file. Try again using annotation.py or continue to use default marker data.")
+#Otherwise Uuse default marker data
+if not marker_loaded:
+    # Prompt for species argument
+    while species == "":
+        species_prompt = input("Input species of the dataset: ")
+        if not species_prompt == "":
+            species = species_prompt
+
+    #Prompt for tissue argument
+    while tissue == "":
+        tissue_prompt = input("Input tissue of the dataset: ")
+        if not tissue_prompt == "":
+            tissue = tissue_prompt
+
+    #TODO: Use 'species' to collect marker gene file
+    if species == "asdlkasjd":
+        pass
+        remove = 'D_melanogaster_genes_corrected.csv'
+    else:
+        ref_marker = get_markers_from_db(species, tissue)
+    print("Using species="+species+" and tissue="+tissue)
+
+ref_marker = ct.read_markers_from_file('D_melanogaster_genes_corrected.csv')
+
+#Calculate statistics
+sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
+marker_df = ct.wrangle_ranks_from_anndata(adata)
+
+#Calculate p-value and scores needed for 'assign_celltypes'
+background = adata.var.index.tolist()
+ct_pval, ct_score = ct.celltype_scores(nb_bins=m,
+                                        ranked_genes=marker_df,
+                                        K_top = K,
+                                        marker_ref=ref_marker,
+                                        background_genes=background)
+
+#Annotate
+adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval, ct_score_df=ct_score)
+
+#Visualize results
+sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
+
+#Export results as an excel
+adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
+adata.obs.to_excel(species+' '+tissue+' annotation.xlsx')
+
+#Message about other python script
+print("If you would like to experiment with different parameters regarding only annotation, please use 'annotate.py' and input the post-filtered 'adata.h5ad' file.")

@@ -6,6 +6,7 @@ R# Table of contents
 
 - [**Software used**](#software-used)
 - [**General Pipeline**]
+- [**Cellranger**]
   - **1. Cellranger - make reference transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
@@ -15,26 +16,26 @@ R# Table of contents
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cellranger count**](#2b-cellranger-count)
   - [**3. Cellranger Output**](#3-build-star-reference)
-  - [**4. 
-  - [**5. Quality Control in Scanpy**](#5-quality-control-in-scanpy)
-    - [**5a. User analysis plots**](#5a-user-analysis-tools)
+- [**scrnaseq.py**] 
+  - [**1. Quality Control in Scanpy**](#1-quality-control-in-scanpy)
+    - [**1a. User analysis plots**](#1a-user-analysis-tools)
       - [**5ai Highest expressed genes overview**](#5ai-Highest-expressed-genes)
-      - [**5aii Gene distribution**](#5aii-gene-distribution)
-      - [**5aiii Cell distribution**](#5aiii-cell-distribution)
-    - [**5b Filtering**](#5b-Filtering)
-    - [**5c Batch Effect Correction**](#5c-batch-effect-correction)
-  - [**6 Remove Highly Variable Genes**](#6-remove-highly-variable-genes)
-    - [**6a Preparation**](#6a-normalization-and-logarithmization)
-    - [**6b Remove Highly Variable Genes**](#6b-remove-highly-variable-genes)
-  - [**7 Clustering**](#7-clustering)
-    - [**7a K-Nearest Neighbors**](#7a-knn)
-    - [**7b Leiden Clustering](#7b-leiden-clustering)
-  - [**8 Visualization**](#8-visualization)
-    - [**8a UMAP**](#8a-umap)
-    - [**8b Cluster Overview](#8b-clusters)
-      - [**8bi
-    - [**8c Gene Expression](#8c-gene-expression)
-      - [**8ci
+      - [**1aii Gene distribution**](#1aii-gene-distribution)
+      - [**1aiii Cell distribution**](#1aiii-cell-distribution)
+    - [**1b Filtering**](#1b-Filtering)
+    - [**1c Batch Effect Correction**](#1c-batch-effect-correction)
+  - [**2 Remove Highly Variable Genes**](#2-remove-highly-variable-genes)
+    - [**2a Preparation**](#2a-normalization-and-logarithmization)
+    - [**2b Remove Highly Variable Genes**](#2b-remove-highly-variable-genes)
+  - [**3 Clustering**](#3-clustering)
+    - [**3a K-Nearest Neighbors**](#3a-knn)
+    - [**3b Leiden Clustering](#3b-leiden-clustering)
+  - [**4 Visualization**](#4-visualization)
+    - [**4a UMAP**](#4a-umap)
+    - [**4b Cluster Overview](#4b-clusters)
+      - [**4bi
+    - [**5c Gene Expression](#4c-gene-expression)
+      - [**5ci
 
 
 ---
@@ -48,6 +49,8 @@ R# Table of contents
 | SRA Toolkit | 2.11.0 | https://github.com/ncbi/sra-tools |
 | Scanpy | 1.8 | https://scanpy.readthedocs.io/en/stable/ |
 
+# Cellranger
+
 ## 1. Cellranger Reference Transcriptome
 
 To count a dataset with cellranger, a reference transcriptome, and the fastq files are required. The first step of this pipeline involves making a reference transcriptome, if not using cellranger's given transcriptomes (which are currently only human and mice transcriptomes).
@@ -56,7 +59,7 @@ For a simple example, we will be using a plant dataset, Arabidopsis Thaliana to 
 
 ---
 
-## 1a ENSEMBL files
+### 1a ENSEMBL files
 
 > ** Before running mkref, we need 2 important files: a whole genome fasta file, and a gtf file, preferably both from Ensembl. While files from other places might work, there might changes needed in the file, for example contigs needed to be changed in the gtf file. The whole genome fasta file will need to be one file, instead of split of files for each chromosome.**
 
@@ -64,7 +67,7 @@ On EMSEMBL, the whole genome file is normally named as *.primary_assembly.fa. If
 
 ---
 
-## 1b Cellranger mkgtf
+### 1b Cellranger mkgtf
 
 Before running the mkref method, we can also use cellranger's mkgtf method to filter out the gtf file of annotated genes we might not need.The command is below:
 
@@ -103,7 +106,7 @@ Output:
 
 ---
 
-## 1c Cellranger mkref
+### 1c Cellranger mkref
 
 Cellranger has a command to make transcriptomes called:
 
@@ -127,7 +130,7 @@ Output:
 
 ---
 
-## 1d Test with scripts
+### 1d Test with scripts
 
 Let's test our Arabiodopsis dataset with our Slurm scripts. After getting required files, lets make a reference transcriptome.
 
@@ -153,11 +156,11 @@ sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.top
 
 We now have a folder called Arabidopsis which is our reference transcriptome.
 
-# 2. Cellranger Counts Setup
+## 2. Cellranger Counts Setup
 
 Our next step will be to make a counts matrix of our dataset.
 
-## 2a Datasets
+### 2a Datasets
 
 Cellranger has strict requirements for running count on datasets. The counts function will need fastq files in the format:
 
@@ -225,7 +228,7 @@ The final file structure for the fastq files will look like below (this is for A
 > └── SRR13040586_S1_L001_R2_001.fastq.gz
 
 
-## 2b Cellranger Counts
+### 2b Cellranger Counts
 
 Now we will actually run the cellranger counts method. (Note. This may be computationally intensive, mostly on RAM. Please check your system specs to make sure it works correctly)
 
@@ -276,34 +279,64 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ---
 
-## 1 Script Arguments
-
-## 1a Cellranger arguments
-
-## 1b Earlier initialization arguments
-
-## 1c Other arguments
+## 1 Setup and Introduction
 
 ---
 
-## 2 Packages
+## 1a Packages
 
 This program requires the following packages: ```NumPy```, ```PANDAS```, ```ScanPy```, ```seaborn```, ```matplotlib```, ```HarmonyPy```, ```scikit-misc```, and ```leidenalg```. However, if these packages are not install, the program will automatically install them.
 
 ---
 
-## 3 Cellranger
+## 1b Prompts
+
+This program will be an interactive experience and will provide the user opportunities to view the data and pasa an argument at each step of the pipeline process. Users can also pass the ```-disable_interrupts``` argument to run the program without any interruptions. 
+
+## 1c Arguments
+
+The majority of these arguments will be prompted during a program run with interruptions and therefore are optional. The only required argument is ```--filepath``` for the location and directory name of the cellranger output.
+
+```
+scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts] [--min_cells THRESHOLD] [--min_genes THRESHOLD] [--neighbors K] [--res CLUSTER_RESOLUTION] [--genes GENES] [--species SPECIES] [--tissue TISSUE]
+
+--filepath CELLRANGER_OUTPUT (REQUIRED)
+	File path of the cellranger output folder.
+-disable_interrupts
+	Disable program interruptions for user analysis and argument 
+	prompt. 
+--min_cells THRESHOLD (default: 1)
+	The minimum number of cells that a gene has to be expressed 
+	in to pass the filter.
+--min_genes THRESHOLD (default: 1st precentile)
+	The minimum number of genes a cell has to express to pass 
+	the filter.
+--neighbors K (default: sqrt(n))
+	The number of neighbors to "vote" for a cell in the KNN 	algorithm. This argument will not be prompted during the 
+	program.
+--res CLUSTER_RESOLUTION (default: 1.0)
+	A decimal number determining the amount of clusters. The 
+	higher the number, the more clusters in the results.
+--genes GENES
+	A list of comma (,) separated genes to visualize after 
+	filtering has finished.
+--species SPECIES (default: "human")
+	Species of the sample (ex. human, mouse, etc.).
+--tissue TISSUE (default: "all")
+	Tissue type of the sample (ex. brain, heart, etc.).
+```
+
 ---
 
-## 5 Quality control in scanpy
+## 2 Quality control in scanpy
 
 Before any clustering or calculations are performs, the data needs to be processed to filter out any unwanted data or contamination that will affect the results.
 
 ---
 
-## 5a User analysis tools
+## 2a User analysis tools
 
-This section would let the user to analyze the distribution of the data and encourage them to select a threshold for filtering cells and genes. 3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time. Note that none of the images will be automatically saved! 
+This section would let the user analyze the distribution of the data and encourage them to select a threshold for filtering cells and genes. 3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time. Note that none of the images will be automatically saved! 
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
@@ -314,7 +347,7 @@ Default settings are provided should the user not provide an input simply by lea
 
 ---
 
-## 5ai Highest expressed genes
+## 2ai Highest expressed genes
 
 This graph will pop up and show boxplox distributions of the highest expressed genes. It is recommended that the user note the amount of outliers and the genes listed.
 
@@ -324,7 +357,7 @@ sc.pl.highest_expr_genes(adata)
 
 ---
 
-## 5aii Gene distribution
+## 2aii Gene distribution
 
 This will show the distribution of the number of genes expressed in cells. These genes are counted using:
 
@@ -344,7 +377,7 @@ After closing the window for the graph, the user would then be prompted to enter
 
 ---
 
-## 5aiii Cell distribution
+## 2aiii Cell distribution
 
 This will show the distribution of the number of cells that has a certain gene expressed. These cells are counted using:
 
@@ -363,7 +396,7 @@ Input min_genes threshold or leave blank to use default settings:
 
 ---
 
-## 5b Filtering
+## 2b Filtering
 
 After the threshold is determined, here is where the cells and genes would be filtered out of the data using:
 
@@ -380,13 +413,13 @@ Output:
 
 ---
 
-## 6 Remove Highly Variable Genes
+## 3 Remove Highly Variable Genes
 
 Remove genes that are highly variable in the data to reduce variablity in clustering in the next step. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
 
 ---
 
-## 6a Normalization and Logarithmization
+## 3a Normalization and Logarithmization
 
 ```
 sc.pp.normalize_total(adata,target_sum=1e6)
@@ -401,7 +434,7 @@ Output
 
 ---
 
-## 6b Remove Highly Variable Genes
+## 3b Remove Highly Variable Genes
 
 ```
 sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
@@ -417,13 +450,13 @@ Output
 
 ---
 
-## 7 Clustering
+## 4 Clustering
 
 Once the data has been cleaned through filtering, the data is ready to be clustered to determine similarities and pattersns within the data.
 
 ---
 
-## 7a KNN
+## 4a KNN
 
 ```
 sc.pp.neighbors(adata, n_neighbors=n)
@@ -439,7 +472,7 @@ Output:
 
 ---
 
-## 7b Leiden Clustering
+## 4b Leiden Clustering
 
 ```
 sc.tl.leiden(adata, resolution=cluster_res)
@@ -452,13 +485,13 @@ Output:
 
 ---
 
-## 8 Visualization
+## 5 Visualization
 
 A window will pop up one at a time to view a graph visualizing the clusters and another for individual gene expression. Note that none of the images will be automatically saved!
 
 ---
 
-## 8a UMAP
+## 5a UMAP
 
 ```
 sc.tl.umap(adata)
@@ -471,7 +504,7 @@ Output:
 
 ---
 
-## 8b Clusters
+## 5b Clusters
 
 ```
 sc.pl.umap(adata, color=['leiden'])
@@ -484,7 +517,7 @@ Output:
 
 ---
 
-## 8bi Clustering Revisited: Resolution
+## 5bi Clustering Revisited: Resolution
 
 At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to adjust the *cluster resolution*. 
 
@@ -492,20 +525,20 @@ Cluster resolution affects the number of clusters in the output. The higher the 
 
 The user can repeatedly adjust and view the results of the cluster until they are satisfied. To exit, simply give a blank input.
 
-## 8c Gene Expression
+## 5c Gene Expression
 
 This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression. Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will display the first 2 genes' plot in adata as a sample.
 
 
 ---
 
-## 8ci Additional Visualization
+## 5ci Additional Visualization
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: Gm1992, Rp1
 ```
 
-Follow this is an opportunity for the user to view other genes now that the data has been processed. A prompt will appear allowing users to repeated view as many genes to their liking. Enter a list of genes separated commas to be view, then a new graph will appear showing those genes' expressing
+Following this is an opportunity for the user to view other genes now that the data has been processed. A prompt will appear allowing users to repeated view as many genes to their liking. Enter a list of genes separated commas to be view, then a new graph will appear showing those genes' expressing
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: -list 50
