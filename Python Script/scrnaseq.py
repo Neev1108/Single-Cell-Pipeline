@@ -19,6 +19,7 @@ while True:
         import seaborn as sb
         import matplotlib.pyplot as plt
         import scorect_api as ct
+        import openpyxl
         break
     except:
         print("***Some packages have not been installed. Installing now...***")
@@ -37,6 +38,7 @@ while True:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
         subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
 
         if not os.path.exists("scorect_api.py"):
             urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
@@ -51,7 +53,6 @@ while True:
         # Remove installer if it wasn't available before for discretion
         if remove: os.remove("get-pip.py")
 print("Package import success!")
-input()
 
 """Variables
 These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
@@ -59,14 +60,14 @@ These will be default numbers if the user does not change these inputs. Much of 
 #These arguments will be dependent on user input.
 #User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
 n=-1                    #Initialized later
-cluster_res = 1.0
+cluster_res = 0.5
 min_cells = -1
 min_genes = -1
 genes = []
 
 #Annotation arguments
 species = ""
-tissue = ""
+tissue = "\"\""
 K = 350
 m = 15
 
@@ -93,7 +94,6 @@ m_arg = "--bins"
 file_path_arg = "--filepath"
 markers_path_arg = "--markers"
 disable_interrupt_arg = "-disable_interrupts"
-
 
 """Parse arguments"""
 args = sys.argv[1:]
@@ -124,7 +124,7 @@ for arg in args:
         K = float(arg[arg.index("=") + 1:])
     elif m_arg+"=" in arg:
         m = float(arg[arg.index("=") + 1:])
-    if markers_path_arg in arg:
+    elif markers_path_arg in arg:
         markers_path = arg[arg.index("=") + 1:]
         if markers_path[-1] != "/" or markers_path[-1] != "\\": markers_path += "/"
 
@@ -339,12 +339,12 @@ https://stackoverflow.com/questions/11568897/value-of-k-in-k-nearest-neighbor-al
 if n == -1:
   n = round(np.sqrt(adata.n_obs))
 
-print("\n*Do not be concerned about the following warning.")
+print("\n*Do not be concerned about the following warning. Cluster data...")
 sc.pp.neighbors(adata, n_neighbors=n)
 
 """Cluster
 Cluster/Group each cell based on the distances calculated in the previous step using the Leiden algorithm.
-'resolution' determines the amount of clusters that will be formed (default: 1.0. The higher the resolution, the more clusters in the result)
+'resolution' determines the amount of clusters that will be formed (default: 0.5. The higher the resolution, the more clusters in the result)
 """
 sc.tl.leiden(adata, resolution=cluster_res)
 
@@ -489,20 +489,23 @@ while True and interrupt:
 
 """Export adata to use in annotate.py"""
 adata.write("adata.h5ad")
-print("Exported data to 'adata.h5ad'. The following steps can be repeated using [SCRIPT NAME] and this program can safely exited.")
+print("Exported data to 'adata.h5ad'. The following steps can be repeated using \'annotate.py\' and this program can safely exited.")
 
 """Annotate data
 TODO DESCRIPTION
 """
 #Load marker file
+
 #Allow users to use own marker gene file
 marker_loaded = False
 if not markers_path == "":
     try:
         ref_marker = ct.read_markers_from_file(markers_path)
+        print("Using marker file: \""+markers_path+"\"")
         marker_loaded = True
     except:
-        print("Invalid marker file. Try again using annotation.py or continue to use default marker data.")
+        print("Invalid marker file. Try again using annotation.py or continue to use provided marker data.")
+
 #Otherwise Uuse default marker data
 if not marker_loaded:
     # Prompt for species argument
@@ -511,21 +514,30 @@ if not marker_loaded:
         if not species_prompt == "":
             species = species_prompt
 
-    #Prompt for tissue argument
-    while tissue == "":
-        tissue_prompt = input("Input tissue of the dataset: ")
-        if not tissue_prompt == "":
-            tissue = tissue_prompt
-
     #TODO: Use 'species' to collect marker gene file
-    if species == "asdlkasjd":
-        pass
-        remove = 'D_melanogaster_genes_corrected.csv'
+    species = species[0].upper() + species[1:].lower()
+    if species == "Drosophila melanogaster" or species == "Fruitfly" or species == "D_melanogaster":
+        markers_path = 'marker genes/D_melanogaster_genes.csv'
+    elif species == "Mouse-ear cress" or species == "Mouse ear cress" or species == "Thale cress" or species == "Arabidopsis thaliana" or species == "A_thaliana":
+        markers_path = 'marker genes/A_thaliana_genes.csv'
+    elif species == "Dario rerio" or species == "Zebrafish":
+        markers_path = 'marker genes/Dario_rerio_genes.csv'
     else:
-        ref_marker = get_markers_from_db(species, tissue)
-    print("Using species="+species+" and tissue="+tissue)
+        # Prompt for tissue argument
+        while tissue == "\"\"" or tissue == "":
+            tissue_prompt = input("Input tissue of the dataset: ")
+            if not tissue_prompt == "":
+                tissue = tissue_prompt
+        tissue = tissue[0].upper() + tissue[1:].lower()
 
-ref_marker = ct.read_markers_from_file('D_melanogaster_genes_corrected.csv')
+        print("Retrieving data...")
+        ref_marker = ct.get_markers_from_db(species, tissue)
+        print("Using species="+species+" and tissue="+tissue)
+        marker_loaded = True
+
+    if not marker_loaded:
+        print("Using species="+species)
+        ref_marker = ct.read_markers_from_file(markers_path)
 
 #Calculate statistics
 sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
@@ -543,11 +555,16 @@ ct_pval, ct_score = ct.celltype_scores(nb_bins=m,
 adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval, ct_score_df=ct_score)
 
 #Visualize results
-sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
+if interrupt:
+    sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
 
 #Export results as an excel
 adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
-adata.obs.to_excel(species+' '+tissue+' annotation.xlsx')
+output_name = species+" "
+if not tissue == "\"\"":
+    output_name += tissue +" "
+adata.obs.to_excel(output_name+'annotation.xlsx')
 
 #Message about other python script
-print("If you would like to experiment with different parameters regarding only annotation, please use 'annotate.py' and input the post-filtered 'adata.h5ad' file.")
+print("\nAnnotation exported to \'"+output_name+'annotation.xlsx\'')
+print("*If you would like to experiment with different parameters regarding annotation only, please use 'annotate.py' and with the post-filtered 'adata.h5ad' file.*")
