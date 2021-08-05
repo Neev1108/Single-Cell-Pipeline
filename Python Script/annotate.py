@@ -115,7 +115,7 @@ if not markers_path == "":
         print("Using marker file: \""+markers_path+"\"")
         marker_loaded = True
     except:
-        print("Invalid marker file. Try again using annotate.py or continue to use provided marker gene data.")
+        print("Invalid marker file. Try again using or continue to use provided marker gene data.")
 
 #Otherwise use default marker data
 if not marker_loaded:

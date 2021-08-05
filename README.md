@@ -279,6 +279,10 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ---
 
+# SCRNASEQ Python Script
+
+---
+
 ## 1 Setup and Introduction
 
 ---
@@ -291,14 +295,17 @@ This program requires the following packages: ```NumPy```, ```PANDAS```, ```Scan
 
 ## 1b Prompts
 
-This program will be an interactive experience and will provide the user opportunities to view the data and pasa an argument at each step of the pipeline process. Users can also pass the ```-disable_interrupts``` argument to run the program without any interruptions. 
+This program will be an interactive experience and will provide the user opportunities to view the data and pass an argument at each step of the pipeline process. Users can also pass the ```-disable_interrupts``` argument to disable this feature and run the program without any interruptions. 
 
 ## 1c Arguments
 
-The majority of these arguments will be prompted during a program run with interruptions and therefore are optional. The only required argument is ```--filepath``` for the location and directory name of the cellranger output.
+The majority of these arguments will be prompted during a program run with interruptions making most command arguments optional. The only required argument is ```--filepath``` for the location and directory name of the cellranger output.
 
 ```
-scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts] [--min_cells THRESHOLD] [--min_genes THRESHOLD] [--neighbors K] [--res CLUSTER_RESOLUTION] [--genes GENES] [--species SPECIES] [--tissue TISSUE]
+scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts]
+[--min_cells THRESHOLD] [--min_genes THRESHOLD] [--neighbors K]
+[--res CLUSTER_RESOLUTION] [--genes GENES] [--species SPECIES]
+[--tissue TISSUE]
 
 --filepath CELLRANGER_OUTPUT (REQUIRED)
 	File path of the cellranger output folder.
@@ -312,60 +319,54 @@ scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts] [--min_cells THRE
 	The minimum number of genes a cell has to express to pass 
 	the filter.
 --neighbors K (default: sqrt(n))
-	The number of neighbors to "vote" for a cell in the KNN 	algorithm. This argument will not be prompted during the 
-	program.
+	The number of neighbors to "vote" for a cell in the KNN 
+	algorithm. This argument will NOT be prompted.
 --res CLUSTER_RESOLUTION (default: 1.0)
 	A decimal number determining the amount of clusters. The 
 	higher the number, the more clusters in the results.
 --genes GENES
-	A list of comma (,) separated genes to visualize after 
-	filtering has finished.
---species SPECIES (default: "human")
-	Species of the sample (ex. human, mouse, etc.).
---tissue TISSUE (default: "all")
-	Tissue type of the sample (ex. brain, heart, etc.).
+	A list of comma (,) separated genes to visualize gene 
+	expression once the data has been filtered.
+--markers MARKER_FILE (default: Provided marker gene files)
+	Provide a marker gene file to annotate the data. Format 
+	described below.
+--species SPECIES (default: "")
+	Species of the sample (ex. human, mouse, etc.). Not 	required if marker gene file was provided.
+--tissue TISSUE (default: "")
+	Tissue type of the sample (ex. brain, heart, etc.). Not 	required if marker gene file was provided.
+--K TOP_K (default: 450)
+	Top K genes to include in annotation scoring.
+--bins M (default: 20)
+	M number of bins to use to divide the gene ranking in 
+	annotation scoring
 ```
 
 ---
 
-## 2 Quality control in scanpy
+## 2 Quality control and User analysis tools
 
-Before any clustering or calculations are performs, the data needs to be processed to filter out any unwanted data or contamination that will affect the results.
+This section would let the user analyze the distribution of the data and select a threshold for filtering cells and genes to remove unwanted or contaminated data. Since datasets vary, it is highly encourged users take the time to determine an accurate value than rely on default values.
 
----
-
-## 2a User analysis tools
-
-This section would let the user analyze the distribution of the data and encourage them to select a threshold for filtering cells and genes. 3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time. Note that none of the images will be automatically saved! 
+3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time. Note that none of the images will be automatically saved! 
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
 Input min_cells threshold or leave blank to use 1:
 ```
 
-Default settings are provided should the user not provide an input simply by leaving the input blank. Additionally, the threshold could be determined at the start of the program using the arguments. 
+Default values are provided should the user not provide an input and leave the input blank. 
 
 ---
 
-## 2ai Highest expressed genes
+## 2a Highest expressed genes
 
-This graph will pop up and show boxplox distributions of the highest expressed genes. It is recommended that the user note the amount of outliers and the genes listed.
-
-```
-sc.pl.highest_expr_genes(adata)
-```
+The first graph that will pop up will show boxplox distributions of the highest expressed genes. It is recommended that the user note the amount of outliers and the genes listed.
 
 ---
 
-## 2aii Gene distribution
+## 2b Gene distribution
 
-This will show the distribution of the number of genes expressed in cells. These genes are counted using:
-
-```
-sc.pp.calculate_qc_metrics(adata)
-```
-
-Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value. This feature was done with the help of the ```VerticalCursor``` class, which is a modified version of some [open source code from matplotlib](https://matplotlib.org/stable/gallery/misc/cursor_demo.html)
+The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
@@ -377,35 +378,15 @@ After closing the window for the graph, the user would then be prompted to enter
 
 ---
 
-## 2aiii Cell distribution
+## 2c Cell distribution
 
-This will show the distribution of the number of cells that has a certain gene expressed. These cells are counted using:
-
-```
-sc.pp.calculate_qc_metrics(adata)
-```
-
-Users are encouraged to use this graph to determine an 'x' value as the minimum number of cells required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value. This feature was done with the help of the ```VerticalCursor``` class, which is a modified version of some [open source code from matplotlib](https://matplotlib.org/stable/gallery/misc/cursor_demo.html)
-
-
-After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed.
+Next, the distribution of the number of cells that has a certain gene expressed. Users are encouraged to use this graph to determine an 'x' value as the minimum number of cells required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
 ```
-Input min_genes threshold or leave blank to use default settings: 
+Input min_cells threshold or leave blank to use 1:
 ```
 
----
-
-## 2b Filtering
-
-After the threshold is determined, here is where the cells and genes would be filtered out of the data using:
-
-```
-sc.pp.filter_cells(adata, min_genes = min_genes)
-sc.pp.filter_genes(adata, min_cells = min_cells)
-```
-
-If a value is not given, whether through command argument or prompt, a predetermined value and formula would be used instead. However, it is not guarenteed to be accurate due to differences in datasets.
+After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of cells threshold. Leaving the prompt blank would use the default value or the argument value if it was passed.
 
 Output: 
 -Filtered adata
@@ -415,35 +396,21 @@ Output:
 
 ## 3 Remove Highly Variable Genes
 
-Remove genes that are highly variable in the data to reduce variablity in clustering in the next step. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
-
----
-
-## 3a Normalization and Logarithmization
-
-```
-sc.pp.normalize_total(adata,target_sum=1e6)
-sc.pp.log1p(adata)
-
-```
-
-To preserve biological heterogeneity and reduce noise or general variability, the total number of counts per cells is normalize. The data is than logarithmized to improve data linearly. It is also required to be performed for the ```highly_variable_genes``` function. 
-
-Output
--Normalized and logarithmized adata
-
----
-
-## 3b Remove Highly Variable Genes
+The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No arguments are required for this step and the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
 
 ```
 sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
 adata = adata[:, adata.var.highly_variable==False]
 ```
 
-First we use R's Seurat's algorithm to determine highly variable genes. Then, we simply filter out those genes. ```min_disp``` was increased to create a requirement for the formula.
+<details>
+  <summary>Explanation of the Algorithm</summary>
 
-**Explanation of the Algorithm**: Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+  This program use's R's Seurat's algorithm.
+
+  Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+
+</details>
 
 Output
 -Highly variable genes removed in adata
@@ -458,11 +425,7 @@ Once the data has been cleaned through filtering, the data is ready to be cluste
 
 ## 4a KNN
 
-```
-sc.pp.neighbors(adata, n_neighbors=n)
-```
-
-Before Leiden clustering could be performed, distance must be calculated for each cell. This is done using the K-Nearest Neighbors algorithm , or KNN, which calculate euclidean distances based on the "votes" of its neighbors. The number of neighbors (```n_neighbors```) to vote (also known as "k") could be provided by the user, if not, a formula is confidently used as default.
+Before Leiden clustering could be performed, the distance must be calculated for each cell. This is done using the K-Nearest Neighbors algorithm (KNN) which calculates euclidean distances based on the "votes" of its neighbors. The top number of neighbors to vote (also known as "k") could be provided by the user using ```--neighbors```. There will not a prompt for this and providing a new 'k' is entirely optional.
 
 Note: the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. It should also be noted this is the most computationally intense portion of the program.
 
@@ -474,10 +437,6 @@ Output:
 
 ## 4b Leiden Clustering
 
-```
-sc.tl.leiden(adata, resolution=cluster_res)
-```
-
 Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z#:~:text=Unlike%20the%20Louvain%20algorithm%2C%20the,moved%20to%20a%20different%20community.). The Leiden algorithm uses the distances calculated in ```neighbors``` to perform its calculation. 
 
 Output:
@@ -485,60 +444,35 @@ Output:
 
 ---
 
-## 5 Visualization
+## 4c Visualization
 
-A window will pop up one at a time to view a graph visualizing the clusters and another for individual gene expression. Note that none of the images will be automatically saved!
-
----
-
-## 5a UMAP
-
-```
-sc.tl.umap(adata)
-```
-
-This is an algorithm that uses the distances calculated in ```neighbors``` to carefully reduce the dimensions of the data down to two for 2d graphing. Scanpy has determined this is be a better option than t-SNE for those who familar with it.
-
-Output:
--Coordinate values for each cell for umap plot in adata
+A window will pop to display a UMAP graph visualizing the clusters. Close the graphs to move on with the program. Note that the images will be automatically saved!
 
 ---
 
-## 5b Clusters
+## 4d Cluster Revisited: Resolution
 
-```
-sc.pl.umap(adata, color=['leiden'])
-```
-
-The first graph to be viewed is a umap plot color coded for each cluster. This gives a general overview of the differences snd variability of the data. The gene expression plots can only be view after closing this window. Remember to save the image before closing!
-
-Output:
--Cluster umap plot
-
----
-
-## 5bi Clustering Revisited: Resolution
-
-At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to adjust the *cluster resolution*. 
+At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the *cluster resolution. 
 
 Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```1.0```.
 
-The user can repeatedly adjust and view the results of the cluster until they are satisfied. To exit, simply give a blank input.
+The user can repeatedly adjust and view the results of the cluster until they are satisfied. To continue with the program, simply give a blank input.
 
-## 5c Gene Expression
+## 5 Visualization
 
-This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression. Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will display the first 2 genes' plot in adata as a sample.
+## 5a Gene Expression
 
+The program will display another UMAP graph, this time to view gene expression. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will display the first 2 genes' plot in adata as a sample.
 
 ---
 
-## 5ci Additional Visualization
+## 5b Additional Visualization
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: Gm1992, Rp1
 ```
 
-Following this is an opportunity for the user to view other genes now that the data has been processed. A prompt will appear allowing users to repeated view as many genes to their liking. Enter a list of genes separated commas to be view, then a new graph will appear showing those genes' expressing
+Following this is an opportunity for the user to view other genes now that the data has been processed. A prompt will appear allowing users to repeatedly view as many genes to their liking. Enter a list of genes separated commas to be view, then a new graph will appear showing those genes' expressing
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: -list 50
@@ -551,7 +485,7 @@ Aicda,	Aida,	Aif1,	Aif1l
 Aifm1,	Aifm2,	Aifm3,	Aig1
 ```
 
-Users could print out a list out all the genes in alphabetical order a handful at a time. Enter ```-list ``` followed by the desired page number to view the genes.
+Users could also print out a list of all the genes in alphabetical order a handful at a time. Enter ```-list ``` followed by the desired page number to view the genes.
 
 To exit the program, simply enter ```-exit```
 
@@ -560,5 +494,26 @@ Output:
 
 ---
 
-## 9 Data Annotation
+## 6 Data Annotation
 
+The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ``adata.h5ad``` which is used in ```annotate.py```.
+
+---
+
+## 6a Marker Gene File
+
+---
+
+## 6ai Default Marker Gene Files
+
+---
+
+## 6b Visualization
+
+Once the program finishes annotating the data, the program will display a UMAP of the clustered results for the user to view. Close this window to continue the program. Note that this image will not be automatically saved!
+
+---
+
+## 6c Parameter tuning (```annotate.py``` only)
+
+## 6d Export annotation
