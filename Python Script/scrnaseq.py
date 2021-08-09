@@ -5,231 +5,333 @@ Original file is located at
     https://colab.research.google.com/drive/1Ir3kLJnSJcWnXfZZZ6qX4oIDIbU6IZ79
 """
 
-#Import or Install Libraries
-while True:
-    try:
-        print("Loading packages...")
-        import sys
-        import os
-        import subprocess
+"""Helper Functions
+Created helper functionss to minimize padding from log related code within the pipeline."""
+#Flush file on write in case of forced program exit
+def log(msg):
+    file.write(msg+"\n")
+    file.flush()
 
-        import numpy as np
-        import pandas as pd
-        import scanpy as sc
-        import seaborn as sb
-        import matplotlib.pyplot as plt
-        import scorect_api as ct
-        import openpyxl
-        break
-    except:
-        print("***Some packages have not been installed. Installing now...***")
-        import urllib.request
+#Save figure and V&V
+def save_figure(image_name):
+    plt.savefig(image_directory + image_name)
+    if interrupt: plt.show()
+    VV_file_save(image_directory,image_name,"Saved \"" + image_name + "\"")
+    plt.close()
 
-        # Retrieve installer if not available
-        remove = False
-        if not os.path.exists("get-pip.py"):
-            urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
-            remove = True
-        subprocess.check_call([sys.executable, "get-pip.py"])
 
-        # Download and install packages if not installed
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+#Validate and verify flies were successfully saved
+def VV_file_save(dir, filename, success_msg):
+    if not os.path.isfile(dir + filename):
+        print("ERROR: Could not save \""+filename+"\" file!")
+        log("ERROR: Could not save \""+filename+"\" file!")
+    else:
+        log(success_msg)
 
-        if not os.path.exists("scorect_api.py"):
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
-            # Required by scorect_api
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+#Normalize adata, while also validating and verify its success
+def normalize_and_VV():
+    adata.write("pre-normalize.h5ad")
+    sc.pp.normalize_total(adata, target_sum=1e6)    #Pipeline normalization
+    adata.write("post-normalize.h5ad")
+    pre_hash = hashlib.md5(open("pre-normalize.h5ad", "rb").read()).hexdigest()
+    post_hash = hashlib.md5(open("post-normalize.h5ad", "rb").read()).hexdigest()
+    os.remove("pre-normalize.h5ad")                 #Remove files for discretion
+    os.remove("post-normalize.h5ad")
+    assert not pre_hash == post_hash, "Could not normalize data! Try reinstalling scanpy."
 
-        # Packages used but not included in scanpy package
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "harmonypy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-misc"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "leidenalg"])
+"""Setup Log File
+Log major outputs and actions for validation and verification of a successfully run program.
+Created helper functionss to minimize padding from log related code within the pipeline."""
+import os
+import traceback
 
-        # Remove installer if it wasn't available before for discretion
-        if remove: os.remove("get-pip.py")
-print("Package import success!")
+#Directories
+log_dir = "logs/"
+image_directory = "images/"
+marker_dir = "marker genes/"
+adata_dir = "adata/"
+annotation_dir = "annotations/"
+annotate_py_dir = ""
 
-"""Variables
-These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
-"""
-#These arguments will be dependent on user input.
-#User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
-n=-1                    #Initialized later
-cluster_res = 0.5
-min_cells = -1
-min_genes = -1
-genes = []
+run_num = 1
+while os.path.exists(log_dir+"run"+str(run_num)+".txt") or os.path.exists(image_directory+"run"+str(run_num)+".png"):
+    run_num += 1
+file = open(log_dir+"run"+str(run_num)+".txt", "w")
+print("Created log file \"run"+str(run_num)+".txt\" in "+log_dir)
 
-#Annotation arguments
-species = ""
-tissue = "\"\""
-K = 350
-m = 15
+#Set up Image Directory
+image_directory = image_directory + "run" + str(run_num) + "/"
+os.mkdir(image_directory)
+print("Images will be automatically saved at \"" + image_directory + "\"")
+log("Set up \"images/run" + str(run_num) + "/\" directory")
 
-#Other arguments
-file_path = ""
-markers_path = ""
-interrupt=True
+"""***Pipline starts here***
+Try-catch statement used to log exceptions."""
+try:
+    """Import or Install Libraries"""
+    while True:
+        try:
+            print("Loading packages...")
+            log("Program started")
+            import sys
+            import subprocess
+            import gzip
+            import hashlib
 
-"""Command line argument syntax"""
-#Scanpy
-n_arg = "--neighbors"
-resoution_arg = "--res"
-cell_arg = "--min_cells"
-gene_arg = "--min_genes"
-display_arg = "--genes"
+            import numpy as np
+            import pandas as pd
+            import scanpy as sc
+            import seaborn as sb
+            import matplotlib.pyplot as plt
+            import scorect_api as ct
+            import openpyxl
+            break
+        except:
+            print("***Some packages have not been installed. Installing now...***")
+            log("Some packages have not been installed. Attempting to install...")
 
-#Annotation
-species_arg = "--species"
-tissie_arg = "--tissue"
-K_arg = "--K"
-m_arg = "--bins"
+            # Retrieve installer if not available
+            import urllib.request
+            remove = False
+            if not os.path.exists("get-pip.py"):
+                urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
+                remove = True
+            subprocess.check_call([sys.executable, "get-pip.py"])
 
-#Other
-file_path_arg = "--filepath"
-markers_path_arg = "--markers"
-disable_interrupt_arg = "-disable_interrupts"
+            # Download and install packages if not installed
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
 
-"""Parse arguments"""
-args = sys.argv[1:]
-for arg in args:
-    #Required
-    if file_path_arg in arg:
-        file_path = arg[arg.index("=") + 1:]
-        if file_path[-1] != "/" or file_path[-1] != "\\": file_path += "/"
+            if not os.path.exists("scorect_api.py"):
+                urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
+                # Required by scorect_api
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
 
-    #ScanPy arguments
-    elif n_arg+"=" in arg:
-        n = int(arg[arg.index("=") + 1:])
-    elif resoution_arg+"=" in arg:
-        cluster_res = float(arg[arg.index("=") + 1:])
-    elif cell_arg+"=" in arg:
-        min_cells = float(arg[arg.index("=") + 1:])
-    elif gene_arg+"=" in arg:
-        min_genes = float(arg[arg.index("=") + 1:])
-    elif display_arg+"=" in arg:                 #Genes listed must be comma separated
-        genes = arg[arg.index("=") + 1:].split(",")
+            # Packages used but not included in scanpy package
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "harmonypy"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-misc"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "leidenalg"])
+
+            # Remove installer if it wasn't available before for discretion
+            if remove: os.remove("get-pip.py")
+            log("Succesfully installed packages")
+    print("Package import success!")
+    log("Successfully loaded packages")
+
+    """Variables
+    These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
+    """
+    #These arguments will be dependent on user input.
+    #User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
+    n=15
+    cluster_res = 0.5
+    min_cells = -1
+    min_genes = -1
+    genes = []
+
+    #Annotation arguments
+    species = ""
+    tissue = "\"\""
+    K = 450
+    m = 20
+
+    #Other arguments
+    file_path = ""
+    markers_path = ""
+    interrupt=True
+
+    """V&V threshold"""
+    filter_limit = 0.3
+    highly_var_limit = 0.2
+    annotate_limit = 0.3
+
+    """Command line argument syntax"""
+    #Scanpy
+    n_arg = "--neighbors"
+    resoution_arg = "--res"
+    cell_arg = "--min_cells"
+    gene_arg = "--min_genes"
+    display_arg = "--genes"
 
     #Annotation
-    elif species_arg+"=" in arg:
-        species = arg[arg.index("=") + 1:]
-    elif tissie_arg+"=" in arg:
-        tissue = arg[arg.index("=") + 1:]
-    elif K_arg+"=" in arg:
-        K = float(arg[arg.index("=") + 1:])
-    elif m_arg+"=" in arg:
-        m = float(arg[arg.index("=") + 1:])
-    elif markers_path_arg in arg:
-        markers_path = arg[arg.index("=") + 1:]
-        if markers_path[-1] != "/" or markers_path[-1] != "\\": markers_path += "/"
+    species_arg = "--species"
+    tissie_arg = "--tissue"
+    K_arg = "--K"
+    m_arg = "--bins"
 
     #Other
-    elif disable_interrupt_arg in arg:
-        interrupt = False
-    else:
-        sys.exit(arg+" is not a valid argument!")
+    file_path_arg = "--filepath"
+    markers_path_arg = "--markers"
+    disable_interrupt_arg = "-disable_interrupts"
 
-"""Load data"""
-if file_path == "":             #File path is required!
-    raise FileExistsError("You must input a file path of the cell ranger output!")
+    """Parse arguments"""
+    args = sys.argv[1:]
+    for arg in args:
+        #Required
+        if file_path_arg in arg:
+            file_path = arg[arg.index("=") + 1:]
+            if file_path[-1] != "/" or file_path[-1] != "\\": file_path += "/"
 
-#If filepath points directly to data or to cellranger output
-if os.path.isfile(file_path+"matrix.mtx.gz") and os.path.isfile(file_path+"features.tsv.gz") and os.path.isfile(file_path+"barcodes.tsv.gz"):
-    adata = sc.read_10x_mtx(file_path)
-else:
-    if "/outs" in file_path:                                                                         #File path points to other paths within cellranger output
-        file_path = file_path[:file_path.index("outs")]
-    if not os.path.exists(file_path+"outs/filtered_feature_bc_matrix/"):                             #Corrupted cellranger output (that isn't pointed to data)
-        raise FileExistsError(file_path+"outs/filtered_feature_bc_matrix/ is missing in cell ranger output!")
-    if not (os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/matrix.mtx.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/features.tsv.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/barcodes.tsv.gz")):
-        raise FileNotFoundError("One or more of the following files in "+file_path+"outs/filtered_feature_bc_matrix/ is missing: matrix.mtx.gz, features.tsv.gz, barcodes.tsv.gz")   #Missing files in filepath
-    adata = sc.read_10x_mtx(file_path+"outs/filtered_feature_bc_matrix/")
+        #ScanPy arguments
+        elif n_arg+"=" in arg:
+            n = int(arg[arg.index("=") + 1:])
+        elif resoution_arg+"=" in arg:
+            cluster_res = float(arg[arg.index("=") + 1:])
+        elif cell_arg+"=" in arg:
+            min_cells = float(arg[arg.index("=") + 1:])
+        elif gene_arg+"=" in arg:
+            min_genes = float(arg[arg.index("=") + 1:])
+        elif display_arg+"=" in arg:                 #Genes listed must be comma separated
+            genes = arg[arg.index("=") + 1:].split(",")
 
-"""Overview Data"""
-print("Number of cells: "+str(adata.n_obs))
-print("Numebr of genes: "+str(adata.n_vars))
+        #Annotation
+        elif species_arg+"=" in arg:
+            species = arg[arg.index("=") + 1:]
+        elif tissie_arg+"=" in arg:
+            tissue = arg[arg.index("=") + 1:]
+        elif K_arg+"=" in arg:
+            K = float(arg[arg.index("=") + 1:])
+        elif m_arg+"=" in arg:
+            m = float(arg[arg.index("=") + 1:])
+        elif markers_path_arg in arg:
+            markers_path = arg[arg.index("=") + 1:]
 
-#Display a graph for the highest expressed genes
-"""
-In our test, MT genes seem to be highly expressed, and thus will be a cause of concern for our experiment. 
-In standard sCRNA-seq experiments, the common thought is to remove MT genes as a sign of low quality cells due to cell perforation of cytoplasmic RNA loss. 
-However for NASA's Genelab, spaceflight seems to affect mitochondrial gene function, according to our Genelab researcher Dr. Afshin Beheshti.
-Therefore we have made the decision to not remove mitochondrial reads because that would filter our goal of analyzing biological processes from spaceflight.
-
-**Inclusion of mitochondrial reads is vital as spaceflight has demonstrated its involvement in the following:**
-- innate immunity 
-- lipid metabolism
-  => can contribute to greater risk of cardiovascular issues
-- gene regulation 
-- ETC, ATP synthesis (from increased radiation)
-  - increased levels of oxidative damage and stress
-  - muscle loss from metabolic flux changes 
-"""
-if interrupt:
-    sc.pl.highest_expr_genes(adata)
-
-"""Quality Control"""
-#Basic Filtering
-"""
-Our first important step in our analysis will be to do some quality control. Our 2 most important steps of quality control are:
-- Basic filtering 
-- Removal of highly expressed genes
-
-In a standard scRNAseq experiment, there will be 3 steps, including removing MT reads. 
-But of course, of spaceflight experiments, we at Genelab have decided to not include this step in our analysis.
-"""
-
-#Calculate QC metrics and collect dataframe results for cell and gene
-stats = sc.pp.calculate_qc_metrics(adata)
-cell_qc_dataframe = stats[0]
-gene_qc_dataframe = stats[1]
-
-##Graph quality control graphs to find thresholds.
-
-#Helper class that follows cursor and displays a vertical red line when viewing plot to help determine a threshold.
-#This is implementation is a modified version of Matplotlib's open source code: https://matplotlib.org/stable/gallery/misc/cursor_demo.html
-class VerticalCursor:
-    #crosshair cursor.
-    def __init__(self, ax, x_name):
-        self.ax = ax
-        self.vertical_line = ax.axvline(color='red', lw=0.8)
-        # text location in axes coordinates
-        self.text = ax.text(0.72, 0.9, '', transform=ax.transAxes)
-        self.x_name = x_name
-
-    def set_cross_hair_visible(self, visible):
-        need_redraw = self.vertical_line.get_visible() != visible
-        self.vertical_line.set_visible(visible)
-        self.text.set_visible(visible)
-        return need_redraw
-
-    def on_mouse_move(self, event):
-        if not event.inaxes:
-            need_redraw = self.set_cross_hair_visible(False)
-            if need_redraw:
-                self.ax.figure.canvas.draw()
+        #Other
+        elif disable_interrupt_arg in arg:
+            interrupt = False
         else:
-            self.set_cross_hair_visible(True)
-            x, y = event.xdata, event.ydata
-            # update the line position
-            self.vertical_line.set_xdata(x)
-            self.text.set_text(self.x_name+'=%1.2f' % x)
-            self.ax.figure.canvas.draw()
+            sys.exit(arg+" is not a valid argument!")
+    log("Successfully parsed command arguments")
 
-"""Plot cell and  gene distribution
-Looking at this graph, users must decide where to do the minimum cutoff for minimum genes. 
-It is necessary to filter cells based on minimum genes because with that threshold, we can filter cells that have may have been contaminated.
-It is important to do gene filtering after cell filtering because some genes may be detected only in low quality cells.
-Users can zoom into graph by clicking onto the magnifying glass and drawing a rectangle where they wish to have a closer look. 
-"""
+    """Load data"""
+    if file_path == "":             #File path is required!
+        raise FileExistsError("You must input a file path of the cell ranger output!")
 
-#Cell distribution
-if interrupt:
+    #If filepath points directly to data or to cellranger output
+    print("Locating cellranger output...")
+    if os.path.isfile(file_path+"matrix.mtx.gz") and os.path.isfile(file_path+"features.tsv.gz") and os.path.isfile(file_path+"barcodes.tsv.gz"):
+        pass
+    else:
+        if "/outs" in file_path:                                                                         #File path points to other paths within cellranger output
+            file_path = file_path[:file_path.index("outs")]
+        if not os.path.exists(file_path+"outs/filtered_feature_bc_matrix/"):                             #Corrupted cellranger output (that isn't pointed to data)
+            raise FileExistsError(file_path+"outs/filtered_feature_bc_matrix/ is missing in cell ranger output!")
+        if not (os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/matrix.mtx.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/features.tsv.gz") and os.path.isfile(file_path+"outs/filtered_feature_bc_matrix/barcodes.tsv.gz")):
+            raise FileNotFoundError("One or more of the following files in "+file_path+"outs/filtered_feature_bc_matrix/ is missing: matrix.mtx.gz, features.tsv.gz, barcodes.tsv.gz")   #Missing files in filepath
+        file_path += "outs/filtered_feature_bc_matrix/"
+        adata = sc.read_10x_mtx(file_path+"outs/filtered_feature_bc_matrix/")
+
+    #V&V:
+    ##V&V matrix.mtx format
+    with gzip.open(file_path+'matrix.mtx.gz', 'rb') as mtx:
+        for i in range(5000):
+            line = mtx.readline().decode("utf-8")
+            while line[0] == '%': line = mtx.readline().decode("utf-8")  # Skip header(s)
+            entry = line.split(" ")
+            assert len(entry) == 3, "matrix.mtx is NOT in the correct format: "+line
+            try:
+                assert int(entry[2]) == float(entry[2]), "Please convert matrix.mtx to contain integer values: "+line
+            except ValueError:
+                assert False, "matrix.mtx is NOT in the correct format: "+line
+    ##V&V barcodes.tsv/sequences are in the correct format
+    with gzip.open(file_path+'barcodes.tsv.gz', 'rb') as barcodes:
+        for i in range(1000):
+            try:
+                entry = barcodes.readline().decode("utf-8")
+                assert entry[:-3].isalpha() and entry[-3:] == "-1\n", "Entries in barcodes.tsv are NOT in the correct format: "+entry
+            except IndexError:
+                break
+    print("Loading data at " + file_path + "...")
+    log("Cellranger output verified")
+
+    #Load cellranger data
+    adata = sc.read_10x_mtx(file_path)
+    log("Loaded cellranger output")
+
+    """Overview Data"""
+    print("Number of cells: "+str(adata.n_obs))
+    print("Numebr of genes: "+str(adata.n_vars))
+
+    #Display a graph for the highest expressed genes
+    """
+    In our test, MT genes seem to be highly expressed, and thus will be a cause of concern for our experiment. 
+    In standard sCRNA-seq experiments, the common thought is to remove MT genes as a sign of low quality cells due to cell perforation of cytoplasmic RNA loss. 
+    However for NASA's Genelab, spaceflight seems to affect mitochondrial gene function, according to our Genelab researcher Dr. Afshin Beheshti.
+    Therefore we have made the decision to not remove mitochondrial reads because that would filter our goal of analyzing biological processes from spaceflight.
+    
+    **Inclusion of mitochondrial reads is vital as spaceflight has demonstrated its involvement in the following:**
+    - innate immunity 
+    - lipid metabolism
+      => can contribute to greater risk of cardiovascular issues
+    - gene regulation 
+    - ETC, ATP synthesis (from increased radiation)
+      - increased levels of oxidative damage and stress
+      - muscle loss from metabolic flux changes 
+    """
+    sc.pl.highest_expr_genes(adata,show=False)
+    save_figure("highly_expressed_genes.png")
+
+    """Quality Control"""
+    #Basic Filtering
+    """
+    Our first important step in our analysis will be to do some quality control. Our 2 most important steps of quality control are:
+    - Basic filtering 
+    - Removal of highly expressed genes
+    
+    In a standard scRNAseq experiment, there will be 3 steps, including removing MT reads. 
+    But of course, of spaceflight experiments, we at Genelab have decided to not include this step in our analysis.
+    """
+
+    #Calculate QC metrics and collect dataframe results for cell and gene
+    stats = sc.pp.calculate_qc_metrics(adata)
+    cell_qc_dataframe = stats[0]
+    gene_qc_dataframe = stats[1]
+
+    ##Graph quality control graphs to find thresholds.
+
+    #Helper class that follows cursor and displays a vertical red line when viewing plot to help determine a threshold.
+    #This is implementation is a modified version of Matplotlib's open source code: https://matplotlib.org/stable/gallery/misc/cursor_demo.html
+    class VerticalCursor:
+        #crosshair cursor.
+        def __init__(self, ax, x_name):
+            self.ax = ax
+            self.vertical_line = ax.axvline(color='red', lw=0.8)
+            # text location in axes coordinates
+            self.text = ax.text(0.72, 0.9, '', transform=ax.transAxes)
+            self.x_name = x_name
+
+        def set_cross_hair_visible(self, visible):
+            need_redraw = self.vertical_line.get_visible() != visible
+            self.vertical_line.set_visible(visible)
+            self.text.set_visible(visible)
+            return need_redraw
+
+        def on_mouse_move(self, event):
+            if not event.inaxes:
+                need_redraw = self.set_cross_hair_visible(False)
+                if need_redraw:
+                    self.ax.figure.canvas.draw()
+            else:
+                self.set_cross_hair_visible(True)
+                x, y = event.xdata, event.ydata
+                # update the line position
+                self.vertical_line.set_xdata(x)
+                self.text.set_text(self.x_name+'=%1.2f' % x)
+                self.ax.figure.canvas.draw()
+
+    """Plot cell and gene distribution
+    Looking at this graph, users must decide where to do the minimum cutoff for minimum genes. 
+    It is necessary to filter cells based on minimum genes because with that threshold, we can filter cells that have may have been contaminated.
+    It is important to do gene filtering after cell filtering because some genes may be detected only in low quality cells.
+    Users can zoom into graph by clicking onto the magnifying glass and drawing a rectangle where they wish to have a closer look. 
+    """
+
+    #Cell distribution
+
     fig, ax = plt.subplots()
     cursor = VerticalCursor(ax, "min_genes")
     fig.canvas.mpl_connect('motion_notify_event', cursor.on_mouse_move)
@@ -238,10 +340,10 @@ if interrupt:
     plt.xlabel('N genes')
     plt.ylabel('N cells')
     plt.title("Use the graph to determine a threshold for filtering the dataset.")
-    plt.show()
+    save_figure("gene_distribution.png")
 
-    #Collect user input for the minimum amount of genes to filter cells. Can be left blank if arguments already given or for default parameters.
-    while True:
+    ##Collect user input for the minimum amount of genes to filter cells. Can be left blank if arguments already given or for default parameters.
+    while interrupt:
       try:
         min_gene_text = min_genes
         if min_gene_text == -1:
@@ -253,8 +355,7 @@ if interrupt:
       except:
         print("\nError: Please enter an integer value or leave blank!")
 
-#Gene distribution
-if interrupt:
+    #Gene distribution=
     fig, ax = plt.subplots()
     cursor = VerticalCursor(ax, "min_cells")
     fig.canvas.mpl_connect('motion_notify_event', cursor.on_mouse_move)
@@ -264,10 +365,10 @@ if interrupt:
     plt.ylabel('log(N genes)')
     plt.yscale('log')
     plt.title("Use the graph to determine a threshold for filtering the dataset.")
-    plt.show()
+    save_figure("cell_distribution.png")
 
-    #Collect user input for the minimum amount of cells to filter genes. Can be left blank if arguments already given or for default parameters.
-    while True:
+    ##Collect user input for the minimum amount of cells to filter genes. Can be left blank if arguments already given or for default parameters.
+    while interrupt:
       try:
         min_cell_text = min_cells
         if min_cell_text == -1:
@@ -279,107 +380,153 @@ if interrupt:
       except:
         print("\nError: Please enter an integer value or leave blank!")
 
-"""Filtering
-For our defaults, the minimum number of genes for filtering cells is a set number of 1.
-The minimum number of cells for filtering genes is instead going to be percentile based.
-"""
-unfiltered_genes = adata.var_names
-cell_filter_percentile = 0.01
+    """Filtering
+    For our defaults, the minimum number of genes for filtering cells is a set number of 1.
+    The minimum number of cells for filtering genes is instead going to be percentile based.
+    """
+    unfiltered_genes = adata.var_names
+    cell_filter_percentile = 0.01
 
-prefiltered_length = adata.n_vars
-if min_cells == -1 and min_genes == -1:             #Percentile-based filtering (default)
-  print("Filtering using default settings.")
-  stats = sc.pp.calculate_qc_metrics(adata)
-  gene_counts_mean = len(stats[0]['n_genes_by_counts'])
-  min_genes = round(gene_counts_mean*cell_filter_percentile)
-  min_cells = 1
+    prefiltered_gene_length = adata.n_vars
+    prefiltered_cell_length = adata.n_obs
+    if min_cells == -1 and min_genes == -1:             #Percentile-based filtering (default)
+      print("Filtering using default settings.")
+      log("Filtering using default settings")
+      stats = sc.pp.calculate_qc_metrics(adata)
+      gene_counts_mean = len(stats[0]['n_genes_by_counts'])
+      min_genes = round(gene_counts_mean*cell_filter_percentile)
+      min_cells = 1
 
-print("Filtering using min_genes="+str(int(min_genes))+" and min_cells="+str(int(min_cells))+".")
-sc.pp.filter_cells(adata, min_genes = min_genes)
-sc.pp.filter_genes(adata, min_cells = min_cells)
+    print("Filtering using min_genes="+str(int(min_genes))+" and min_cells="+str(int(min_cells))+".")
+    sc.pp.filter_cells(adata, min_genes = min_genes)
+    sc.pp.filter_genes(adata, min_cells = min_cells)
+    log("Filtered using min_genes=" + str(int(min_genes)) + " and min_cells=" + str(int(min_cells)))
 
-#Display filtering results
-print(str(adata.n_vars)+"/"+str(prefiltered_length)+" genes filtered")
+    #Display filtering results
+    print(str(prefiltered_gene_length-adata.n_vars)+"/"+str(prefiltered_gene_length)+" genes filtered")
+    print(str(prefiltered_cell_length - adata.n_obs) + "/" + str(prefiltered_cell_length) + " cells filtered")
+    log(str(prefiltered_gene_length-adata.n_vars)+"/"+str(prefiltered_gene_length)+" genes filtered out")
+    log(str(prefiltered_cell_length - adata.n_obs) + "/" + str(prefiltered_cell_length) + " cells filtered out")
 
-"""Normalize and Logarithmize Data
-Normalization will help to preserve biological heterogeneity without the influence of any technical noise like sequencing depth and gene abundance.
-Note: target_sum = 1e6 here refers to counts per million. 
-Although different methods of normalization does exist, that are more accurate and have better performance, the CPM method is more flexible and 
-scalable to all datasets and pipelines making it the best choice for our Genelab pipeline.
+    #V&V
+    assert adata.n_vars > 0, "All genes have been filtered out!"
+    assert adata.n_obs > 0, "All cells have been filtered out!"
 
-sc.pp.log1p helps to logarithmize the data to improve data "symmetry" on a linear scale for more relevant and accurate data. 
-For further information on this topic, feel free to check out the following link: https://blog.qbaseplus.com/seven-tips-for-bio-statistical-analysis-of-gene-expression-data
-"""
-sc.pp.normalize_total(adata,target_sum=1e6)
-sc.pp.log1p(adata)
-print("Data normalized and logarithmized.")
+    if (prefiltered_gene_length-adata.n_vars)/prefiltered_gene_length > filter_limit:
+        print("WARNING: More than "+str(filter_limit*100)+"% of genes have been filtered out!")
+        log("WARNING: More than "+str(filter_limit*100)+"% of genes have been filtered out!")
 
-"""Remove highly variable genes
-Determine and remove highly variable genes based on each genes' mean and variance. Removing these genes eliminates noise due to high variability in the data.
+    if (prefiltered_cell_length-adata.n_obs)/prefiltered_cell_length > filter_limit:
+        print("WARNING: More than "+str(filter_limit*100)+"% of cells have been filtered out!")
+        log("WARNING: More than "+str(filter_limit*100)+"% of cells have been filtered out!")
 
-Algorithm Description: Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. 
-If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
-(Decribed in the 'Identification of highly variable genes.' section of https://www.nature.com/articles/nbt.3192)
-"""
-sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
-print(str(len(adata.var[adata.var['highly_variable']==True]))+"/"+str(adata.n_vars)+" genes are highly variable and removed.")
-adata = adata[:, adata.var.highly_variable==False]
 
-"""### K-Nearest Neighbors
-Calculate the distance between each cell using the KNN algorithm. Distances will be used to cluster the cells in the next step.
-Note: warning just means it will proceed to automatically calculate PCA since it was not done beforehand.
+    """Normalize and Logarithmize Data
+    Normalization will help to preserve biological heterogeneity without the influence of any technical noise like sequencing depth and gene abundance.
+    Note: target_sum = 1e6 here refers to counts per million. 
+    Although different methods of normalization does exist, that are more accurate and have better performance, the CPM method is more flexible and 
+    scalable to all datasets and pipelines making it the best choice for our Genelab pipeline.
+    
+    sc.pp.log1p helps to logarithmize the data to improve data "symmetry" on a linear scale for more relevant and accurate data. 
+    For further information on this topic, feel free to check out the following link: https://blog.qbaseplus.com/seven-tips-for-bio-statistical-analysis-of-gene-expression-data
+    """
+    normalize_and_VV()
 
-Default (n=sqrt(adata.n_obs)): setting n as the square root of the length of the data is the general consensus if n is not provided.
--Sources:
-https://towardsdatascience.com/how-to-find-the-optimal-value-of-k-in-knn-35d936e554eb
-https://discuss.analyticsvidhya.com/t/how-to-choose-the-value-of-k-in-knn-algorithm/2606/7
-https://stackoverflow.com/questions/11568897/value-of-k-in-k-nearest-neighbor-algorithm
-"""
-#Initialize n now that filtering has finished
-if n == -1:
-  n = round(np.sqrt(adata.n_obs))
+    sc.pp.log1p(adata)
+    #V&V
+    assert 'log1p' in adata.uns.keys(), "Could not logarthimize data (required for clustering). Try reinstalling scanpy."
 
-print("\n*Do not be concerned about the following warning. Cluster data...")
-sc.pp.neighbors(adata, n_neighbors=n)
+    print("Data normalized and logarithmized.")
+    log("Data normalized and logarithmized")
 
-"""Cluster
-Cluster/Group each cell based on the distances calculated in the previous step using the Leiden algorithm.
-'resolution' determines the amount of clusters that will be formed (default: 0.5. The higher the resolution, the more clusters in the result)
-"""
-sc.tl.leiden(adata, resolution=cluster_res)
+    """Remove highly variable genes
+    Determine and remove highly variable genes based on each genes' mean and variance. Removing these genes eliminates noise due to high variability in the data.
+    
+    Algorithm Description: Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. 
+    If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+    (Decribed in the 'Identification of highly variable genes.' section of https://www.nature.com/articles/nbt.3192)
+    """
+    sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
+    print(str(len(adata.var[adata.var['highly_variable']==True]))+"/"+str(adata.n_vars)+" genes are highly variable and removed.")
+    log(str(len(adata.var[adata.var['highly_variable'] == True])) + "/" + str(adata.n_vars) + " genes are highly variable and removed.")
 
-#Visualize Cluster Results
-#Prepares the data to be visualized by simplifying multiple dimensions down to two dimensional coordinates using the UMAP algorithm.
-#This algoithm also uses the distances calculated in 'neighbors()'.
-sc.tl.umap(adata)
+    # V&V
+    assert adata.n_vars > 0, "All genes have been filtered out!"    #Shouldn't be possible, but just in case
+    if len(adata.var[adata.var['highly_variable'] == True])/adata.n_vars > highly_var_limit:
+        print("WARNING: More than " + str(highly_var_limit * 100) + "% of genes have been filtered out due to high variability!")
+        log("WARNING: More than " + str(highly_var_limit * 100) + "% of genes have been filtered out due to high variability!")
 
-#Plot Clusters
-#We will later label these clusters with cell types using marker gene identification.
-if interrupt:
-    sc.pl.umap(adata, color=['leiden'])
+    #Remove highly variable genes
+    adata = adata[:, adata.var.highly_variable==False]
 
-#Repeat the previous steps and allow user to adjust cluster resolution until satisifed.
-while interrupt:
-    try:
-        prompt = input("Enter a decimal to change the cluster resolution (current: "+str(cluster_res)+") or leave blank to keep the results: ")
-        if prompt == "": break
-        cluster_res = float(prompt)
-        sc.tl.leiden(adata, resolution=cluster_res)
-        sc.tl.umap(adata)
-        sc.pl.umap(adata, color=['leiden'])
-    except:
-        print("\nYou must enter a decimal value!")
-print("Using cluster resolution of: "+str(cluster_res))
+    """### K-Nearest Neighbors
+    Calculate the distance between each cell using the KNN algorithm. Distances will be used to cluster the cells in the next step.
+    Note: warning just means it will proceed to automatically calculate PCA since it was not done beforehand.
+    
+    DEPRECATED: using k=15 for computational purposes. Also, it doesn't have too much of an impact in the end.
+    Default (n=sqrt(adata.n_obs)): setting n as the square root of the length of the data is the general consensus if n is not provided.
+    -Sources:
+    https://towardsdatascience.com/how-to-find-the-optimal-value-of-k-in-knn-35d936e554eb
+    https://discuss.analyticsvidhya.com/t/how-to-choose-the-value-of-k-in-knn-algorithm/2606/7
+    https://stackoverflow.com/questions/11568897/value-of-k-in-k-nearest-neighbor-algorithm
+    """
+    print("*Do not be concerned about the following warning. Clustering data...")
+    sc.pp.neighbors(adata, n_neighbors=n)
+    log("KNN distances calculated using n="+str(n))
 
-"""Visualized data based on selected gene(s)
-Color cells based on their expression of a specific gene. 
-The first 2 genes will be displayed as a sample if argument not provided, then prompt user to choose which gene(s) to visualize until satisfied.
-Users can also view a list of genes by a handful at a time so it doesn't overload the command output.
-Users a exit this prompt at anytime to proceed to the next steps.
-Note: purple = no expression
-"""
-#Initial display (argument passed genes or sample first 2 genes)
-if interrupt:
+    """Cluster
+    Cluster/Group each cell based on the distances calculated in the previous step using the Leiden algorithm.
+    'resolution' determines the amount of clusters that will be formed (default: 0.5. The higher the resolution, the more clusters in the result)
+    """
+    sc.tl.leiden(adata, resolution=cluster_res)
+    log("Clustering finished")
+
+    #Visualize Cluster Results
+    #Prepares the data to be visualized by simplifying multiple dimensions down to two dimensional coordinates using the UMAP algorithm.
+    #This algoithm also uses the distances calculated in 'neighbors()'.
+    sc.tl.umap(adata)
+    log("Calculated UMAP")
+
+    #Plot Clusters
+    #We will later label these clusters with cell types using marker gene identification.
+    sc.pl.umap(adata, color=['leiden'], show=False)
+    save_figure("cluster.png")
+
+    #V&V
+    if not '1' in adata.obs['leiden'].to_list():
+        print("WARNING: Only one cluster was created! Please increase the cluster resolution!")
+
+    #Repeat the previous steps and allow user to adjust cluster resolution until satisifed.
+    res_i = 1
+    while interrupt or not ('1' in adata.obs['leiden'].to_list()):
+        try:
+            prompt = input("Enter a decimal to change the cluster resolution (current: "+str(cluster_res)+") or leave blank to keep the results: ")
+            if prompt == "":
+                if not '1' in adata.obs['leiden'].to_list():
+                    print("WARNING: Only one cluster was created! Please increase the cluster resolution!")
+                else:
+                    break
+            cluster_res = float(prompt)
+            sc.tl.leiden(adata, resolution=cluster_res)
+            sc.pl.umap(adata, color=['leiden'], show=False)
+            save_figure("cluster_("+str(res_i)+").png")
+            res_i += 1
+
+        except:
+            if not prompt == "":    #Not a crash due to mono-cluster warning
+                print("You must enter a decimal value!")
+
+    print("Using cluster resolution of: "+str(cluster_res))
+    log("Using cluster resolution of "+str(cluster_res))
+
+    """Visualized data based on selected gene(s)
+    Color cells based on their expression of a specific gene. 
+    The first 2 genes will be displayed as a sample if argument not provided, then prompt user to choose which gene(s) to visualize until satisfied.
+    Users can also view a list of genes by a handful at a time so it doesn't overload the command output.
+    Users a exit this prompt at anytime to proceed to the next steps.
+    Note: purple = no expression
+    """
+    #Initial display (argument passed genes or sample first 2 genes)
     view_genes = []
     if len(genes) != 0:    #Display selected genes' expression
         for gene in genes:
@@ -387,7 +534,7 @@ if interrupt:
                 view_genes.append(gene)
             else:
                 print("\'"+gene+"\' gene is not in the dataset.")
-        sc.pl.umap(adata, color=view_genes)
+        sc.pl.umap(adata, color=view_genes, show=interrupt)
     else:                   #Display the first 2 gene as a sample
         view_genes = []
         title = []
@@ -397,174 +544,188 @@ if interrupt:
             title.append("Sample: "+gene)
             i -= 1
             if i == 0: break
-        sc.pl.umap(adata, color=view_genes, title=title)
+        sc.pl.umap(adata, color=view_genes, title=title, show=False)
+    save_figure("gene_expression_plot.png")
 
-#Additional gene visualization
-PAGE_ROWS = 6
-PAGE_COLS = 4
-gene_list = adata.var_names.sort_values()
-while True and interrupt:
-    prompt = input("Enter the gene(s) you wish to visualize separated by commas (,). Enter \"-list page_#\" to view a list of genes or \"-exit\" to proceed with the program: ")
-    if "-exit" == prompt[0:5] or prompt == "":
-        break
-    elif "-list" == prompt[0:5]:
-        try: page_num = int(prompt[6:])
-        except: page_num = 0
+    #Additional gene visualization
+    PAGE_ROWS = 6
+    PAGE_COLS = 4
+    gene_i = 1
+    gene_list = adata.var_names.sort_values()
+    while interrupt:
+        prompt = input("Enter the gene(s) you wish to visualize separated by commas (,). Enter \"-list page_#\" to view a list of genes or \"-exit\" to proceed with the program: ")
+        if "-exit" == prompt[0:5] or prompt == "":
+            break
+        elif "-list" == prompt[0:5]:
+            try: page_num = int(prompt[6:])
+            except: page_num = 0
 
-        page = page_num*PAGE_ROWS*PAGE_COLS
-        content = ""
-        newline = 0
-        for i in range(PAGE_ROWS*PAGE_COLS):
-            try:
-                content += gene_list[page+i]+",\t"
-                newline+=1
-                if newline == PAGE_COLS:
-                  content=content[:-2]+"\n"
-                  newline = 0
-            except IndexError:
-                break
-        print("Enter '-list #' to view other pages on the list.\n"+content)
-    else:
-        prompted_genes = "".join(prompt.split()).split(",")
-        view_genes = []
-        for gene in prompted_genes:
-            if gene in adata.var_names:
-                view_genes.append(gene)
-            else:
-                print("\'"+gene+"\' gene is not in the dataset.")
-        sc.pl.umap(adata, color=view_genes)
+            page = page_num*PAGE_ROWS*PAGE_COLS
+            content = ""
+            newline = 0
+            for i in range(PAGE_ROWS*PAGE_COLS):
+                try:
+                    content += gene_list[page+i]+",\t"
+                    newline+=1
+                    if newline == PAGE_COLS:
+                      content=content[:-2]+"\n"
+                      newline = 0
+                except IndexError:
+                    break
+            print("Enter '-list #' to view other pages on the list.\n"+content)
+        else:
+            prompted_genes = "".join(prompt.split()).split(",")
+            view_genes = []
+            for gene in prompted_genes:
+                if gene in adata.var_names:
+                    view_genes.append(gene)
+                    sc.pl.umap(adata, color=view_genes, show=False)
+                    save_figure("gene_expression_plot_(" + str(gene_i) + ").png")
+                    gene_i += 1
+                else:
+                    print("\'"+gene+"\' gene is not in the dataset.")
 
-"""Annotate data"""
-#Prepare data to be annotated on SCSA
-#sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-#result = adata.uns['rank_genes_groups']
-#groups = result['names'].dtype.names
-#dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges','scores','pvals']})
-#dat.to_csv("adata.csv")
+    """Export adata to use in annotate.py"""
+    adata.write(adata_dir+"run"+str(run_num)+"_adata.h5ad")
+    VV_file_save(adata_dir, "run"+str(run_num)+"_adata.h5ad", "Successfully exported adata")
+    print("\n*Exported data to \'run"+str(run_num)+"_adata.h5ad\'. The following steps can be repeated using \'annotate.py\' and this program can safely exited.*")
+    if not os.path.isfile(annotate_py_dir+"annotate.py"):
+        print("WARNING: \"annotate.py\" is missing from the environment! Please reinstall the package to prevent any more missing files!")
 
-#print("WARNING: the following can only annotate human or mice cells!")
+    """Annotate data
+    Use ScoreCT to annotate data. Marker gene file must be provided for the package to work.
+    If file not provided to this program, pre-loaded marker files will be used (in 'marker genes' folder).
+    If annotating Human or Mouse, tissue name is required to collect data from Cell Marker.
+    Using 'adata' and the marker gene file, annotate data and add results onto 'adata.obs', then visualize
+    results as a UMAP graph. Finally, output adata.obs as a excel to externally view cell data stats and
+    classification.
+    
+    Marker gene file format example (csv):
+    Cell, Cell, Cell
+    gene, gene, gene
+    gene, gene, gene
+    gene,     , gene
+    etc.,      ,
+    """
+    #Load marker file
 
-#Prompt for species argument
-#if interrupt:
-#    species_prompt = input("Input species of the dataset or leave blank to use \'"+species+"\': ")
-#    if not species_prompt == "":
-#        species = species_prompt
+    #Allow users to use own marker gene file
+    marker_loaded = False
+    if not markers_path == "":
+        try:
+            ref_marker = ct.read_markers_from_file(markers_path)
+            print("Using marker file: \""+markers_path+"\"")
+            log("Loaded marker gene file \""+markers_path+"\"")
+            marker_loaded = True
 
-#Prompt for tissue argument
-#if interrupt:
-#    tissue_prompt = input("Input tissue of the dataset or leave blank to use \'"+tissue+"\': ")
-#    if not tissue_prompt == "":
-#        tissue = tissue_prompt
+            #Additional V&V (read_markers_from_file already checks for formating)
+            assert ref_marker.empty, ""
+        except:
+            print("Failed to load marker gene file. Try again using annotate.py or continue to use provided marker gene data.")
+            log("Failed to load marker gene file")
 
-#Run SCSA
-#print("Annotating with species="+species+" and tissue="+tissue)
-#subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
-
-"""Revisit cluster resolution"""
-#while interrupt:
-#    print("\n*View the output.xlsx file. \n*If you are not satisfied with the results, use this opportunity to adjust the cluster resolution and re-annotate the data.")
-#    while interrupt:
-#        try:
-#            prompt = input("Enter a decimal to change the cluster resolution. Leave blank to keep the resolution. Enter 'exit' to exit: ")
-#            if prompt == "" or prompt == "exit": break
-#            cluster_res = float(prompt)
-#            sc.tl.leiden(adata, resolution=cluster_res)
-#            sc.tl.umap(adata)
-#            sc.pl.umap(adata, color=['leiden'])
-#        except:
-#            print("\nYou must enter a decimal value!")
-#    if prompt == "exit": break
-
-#    print("Using cluster resolution of: "+str(cluster_res))
-#    sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-#    result = adata.uns['rank_genes_groups']
-#    groups = result['names'].dtype.names
-#    dat = pd.DataFrame({group + '_' + key[:1]: result[key][group] for group in groups for key in ['names', 'logfoldchanges', 'scores', 'pvals']})
-#   dat.to_csv("adata.csv")
-#
-#    subprocess.check_call([sys.executable, "SCSA.py", "-i", "adata.csv", "-o", "output", "-s", "scanpy", "-E", "-g", species, "-p", "1", "-f", "1", "-k", tissue])
-
-"""TO BE REMOVED? Reload output into program"""
-#df = pd.read_excel("output.xlsx", None)
-
-"""Export adata to use in annotate.py"""
-adata.write("adata.h5ad")
-print("Exported data to 'adata.h5ad'. The following steps can be repeated using \'annotate.py\' and this program can safely exited.")
-
-"""Annotate data
-TODO DESCRIPTION
-"""
-#Load marker file
-
-#Allow users to use own marker gene file
-marker_loaded = False
-if not markers_path == "":
-    try:
-        ref_marker = ct.read_markers_from_file(markers_path)
-        print("Using marker file: \""+markers_path+"\"")
-        marker_loaded = True
-    except:
-        print("Invalid marker file. Try again using annotation.py or continue to use provided marker data.")
-
-#Otherwise Uuse default marker data
-if not marker_loaded:
-    # Prompt for species argument
-    while species == "":
-        species_prompt = input("Input species of the dataset: ")
-        if not species_prompt == "":
-            species = species_prompt
-
-    #TODO: Use 'species' to collect marker gene file
-    species = species[0].upper() + species[1:].lower()
-    if species == "Drosophila melanogaster" or species == "Fruitfly" or species == "D_melanogaster":
-        markers_path = 'marker genes/D_melanogaster_genes.csv'
-    elif species == "Mouse-ear cress" or species == "Mouse ear cress" or species == "Thale cress" or species == "Arabidopsis thaliana" or species == "A_thaliana":
-        markers_path = 'marker genes/A_thaliana_genes.csv'
-    elif species == "Dario rerio" or species == "Zebrafish":
-        markers_path = 'marker genes/Dario_rerio_genes.csv'
-    else:
-        # Prompt for tissue argument
-        while tissue == "\"\"" or tissue == "":
-            tissue_prompt = input("Input tissue of the dataset: ")
-            if not tissue_prompt == "":
-                tissue = tissue_prompt
-        tissue = tissue[0].upper() + tissue[1:].lower()
-
-        print("Retrieving data...")
-        ref_marker = ct.get_markers_from_db(species, tissue)
-        print("Using species="+species+" and tissue="+tissue)
-        marker_loaded = True
-
+    #Otherwise use default marker data
     if not marker_loaded:
-        print("Using species="+species)
-        ref_marker = ct.read_markers_from_file(markers_path)
+        # Prompt for species argument
+        while species == "":
+            species_prompt = input("Input species of the dataset: ")
+            if not species_prompt == "":
+                species = species_prompt
 
-#Calculate statistics
-sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
-marker_df = ct.wrangle_ranks_from_anndata(adata)
+        #Use 'species' to collect marker gene file
+        species = species[0].upper() + species[1:].lower()
+        if species == "Drosophila melanogaster" or species == "Fruitfly" or species == "D_melanogaster":
+            markers_path = marker_dir+'D_melanogaster_genes.csv'
+            assert os.path.isfile(markers_path), 'D_melanogaster_genes.csv is missing from '+markers_path+"!"
+        elif species == "Mouse-ear cress" or species == "Mouse ear cress" or species == "Thale cress" or species == "Arabidopsis thaliana" or species == "A_thaliana":
+            markers_path = marker_dir+'A_thaliana_genes.csv'
+            assert os.path.isfile(markers_path), 'A_thaliana_genes.csv is missing from ' + markers_path + "!"
+        elif species == "Dario rerio" or species == "Zebrafish":
+            markers_path = marker_dir+'Dario_rerio_genes.csv'
+            assert os.path.isfile(markers_path), 'Dario_rerio_genes.csv is missing from ' + markers_path + "!"
+        # Retrieve data from Cell Marker useing ct.get_markers_from_db(species, tissue)
+        else:
+            #Change keyword to match format if applies
+            if species == "Homo sapian":
+                species = "Human"
+            elif species == "Mus musculus":
+                species = "Mouse"
 
-#Calculate p-value and scores needed for 'assign_celltypes'
-background = adata.var.index.tolist()
-ct_pval, ct_score = ct.celltype_scores(nb_bins=m,
-                                        ranked_genes=marker_df,
-                                        K_top = K,
-                                        marker_ref=ref_marker,
-                                        background_genes=background)
+            #V&V: Assert if species not available
+            assert species == "Mouse" or species == "Human", "Could not find information for "+species+". Please provide a marker gene file for that species in \"annotate.py\"."
 
-#Annotate
-adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval, ct_score_df=ct_score)
+            # Prompt for tissue argument
+            while tissue == "\"\"" or tissue == "":
+                tissue_prompt = input("Input tissue of the dataset: ")
+                if not tissue_prompt == "":
+                    tissue = tissue_prompt
+            tissue = tissue[0].upper() + tissue[1:].lower()
 
-#Visualize results
-if interrupt:
-    sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
+            #Retrieve data from Cell Marker
+            print("Retrieving marker gene data...")
+            ref_marker = ct.get_markers_from_db(species, tissue)
+            print("Using species="+species+" and tissue="+tissue)
+            log("Using Cell Marker with species="+species+" tissue="+tissue+" for marker gene reference")
+            marker_loaded = True
 
-#Export results as an excel
-adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
-output_name = species+" "
-if not tissue == "\"\"":
-    output_name += tissue +" "
-adata.obs.to_excel(output_name+'annotation.xlsx')
+            #V&V: Assert if empty (due to tissue)
+            #if species == "Human" or species == "Mouse":
+            assert not ref_marker.empty, "Could not find information on "+tissue+" for "+species+". Please try again using a different keyword for \'tissue\' on \"annotate.py\"."
 
-#Message about other python script
-print("\nAnnotation exported to \'"+output_name+'annotation.xlsx\'')
-print("*If you would like to experiment with different parameters regarding annotation only, please use 'annotate.py' and with the post-filtered 'adata.h5ad' file.*")
+        if not marker_loaded:
+            print("Using species="+species)
+            ref_marker = ct.read_markers_from_file(markers_path)
+            log("Loaded marker gene file \""+markers_path+"\"")
+
+    #Calculate statistics
+    sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
+    log("Ranked gene groups")
+
+    marker_df = ct.wrangle_ranks_from_anndata(adata)
+    log("Wraggled ranks form adata")
+
+    #Calculate p-value and scores needed for 'assign_celltypes'
+    background = adata.var.index.tolist()
+    ct_pval, ct_score = ct.celltype_scores(nb_bins=m,
+                                            ranked_genes=marker_df,
+                                            K_top = K,
+                                            marker_ref=ref_marker,
+                                            background_genes=background)
+    log("Calculated cell type scores")
+
+    #Annotate
+    adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval, ct_score_df=ct_score)
+
+    #V&V
+    count = 0
+    for classification in adata.obs['cell_type']:
+        if classification.lower() == "na" or pd.isnull(classification):
+            count += 1
+    print(str(count) + "/" + str(adata.n_obs) + " cells were not able to be classified. Try adjusting the parameters in \"annotate.py\".")
+
+    assert not count == adata.n_obs, "None of the cells were able to be classified! Try using a different marker gene file."
+    if (count / adata.n_obs) > annotate_limit:
+        print("WARNING: More than " + str(annotate_limit * 100) + "% of cells were NOT able to be classified!")
+
+    #Visualize results
+    sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue], show=False)
+    save_figure("annotation_plot.png")
+
+    #Export results as an excel
+    adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
+    output_name = species+"_"
+    if not tissue == "\"\"":
+        output_name += tissue +"_"
+    output_name = "run"+str(run_num)+"_"+output_name+"annotation.xlsx"
+    adata.obs.to_excel(annotation_dir+output_name)
+    VV_file_save(annotation_dir, output_name, "Exported \""+output_name+"\"")
+
+    #Message about other python script
+    print("*Annotation exported to \'"+output_name+'annotation.xlsx\'*')
+    print("*If you would like to experiment with different parameters regarding annotation only, please use 'annotate.py' and with the post-filtered 'adata.h5ad' file.*")
+    log("*Program finished running without any errors*")
+except Exception:
+    traceback.print_exc()
+    traceback.print_exc(file=file)
+finally:
+    file.close()
