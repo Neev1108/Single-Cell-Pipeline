@@ -6,10 +6,10 @@ def log(msg):
     file.flush()
 
 #Save figure and V&V
-def save_figure(image_name):
-    plt.savefig(image_directory + image_name)
+def save_figure(image_name, dir):
+    plt.savefig(dir + image_name)
     if interrupt: plt.show()
-    VV_file_save(image_directory,image_name,"Saved \"" + image_name + "\"")
+    VV_file_save(dir,image_name,"Saved \"" + image_name + "\"")
     plt.close()
 
 #Validate and verify flies were successfully saved
@@ -28,20 +28,41 @@ def VnV_classification():
             count+=1
     print(str(count)+"/"+str(adata.n_obs)+" cells were not able to be classified. Try adjusting the parameters.")
 
-    assert not count == adata.n_obs, "None of the cells were able to be classified! Try using a different marker gene file."
+    assert not count == adata.n_obs, "None of the cells were able to be classified! Try using a different marker gene file and double check format."
     if (count/adata.n_obs) > annotate_limit:
         print("WARNING: More than " + str(annotate_limit * 100) + "% of cells were NOT able to be classified!")
+
+#Validate and Verify: Marker gene file format
+def VV_markers(ref):
+    for col in ref.columns:
+        if "Unnamed" in col:
+            return False
+    return True
+
+#Plot UMAP or tSNE
+def plot(adata, color, title=""):
+    if tsne:
+        if title == "":
+            sc.pl.tsne(adata, color=color, show=False)
+        else:
+            sc.pl.tsne(adata, color=color, title=title, show=False)
+    else:
+        if title == "":
+            sc.pl.umap(adata, color=color, show=False)
+        else:
+            sc.pl.umap(adata, color=color, title=title, show=False)
 
 """Setup Log File
 Log major outputs and actions for validation and verification of a successfully run program."""
 import os
 import traceback
 
-#Directories
-log_dir = "logs/"
-image_directory = "images/"
-marker_dir = "marker genes/"
-annotation_dir = "annotations/"
+# Directories
+log_dir = "Preprocessing_Scripts/02-Scanpy/VV_Logs/"
+image_directory = "Preprocessing_Scripts/02-Scanpy/Images/"
+marker_dir = "Preprocessing_Scripts/03-ScoreCT/Marker_genes/"
+annotation_dir = "Preprocessing_Scripts/03-ScoreCT/Annotation_Exports/"
+final_plot_dir = "Preprocessing_Scripts/03-ScoreCT/tSNE_UMAP/"
 
 run_num = 1
 while os.path.exists(log_dir+"annotate_run"+str(run_num)+".txt") or os.path.exists(image_directory+"annotate_run"+str(run_num)+".png"):
@@ -54,6 +75,12 @@ image_directory = image_directory + "annotate_run" + str(run_num) + "/"
 os.mkdir(image_directory)
 print("Images will be automatically saved at \"" + image_directory + "\"")
 log("Set up \"images/annotate run" + str(run_num) + "/\" directory")
+
+#Set up Final Plot Directory
+final_plot_dir = final_plot_dir + "annotate_run" + str(run_num) + "/"
+os.mkdir(final_plot_dir)
+print("Anntation plot will be automatically saved at \"" + final_plot_dir+ "\"")
+log("Set up \"annotate_run" + str(run_num) + "/\" directory"+final_plot_dir)
 
 """***Program starts here***
 Try-catch statement used to log exceptions."""
@@ -104,21 +131,22 @@ try:
     """Variables
     These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
     """
-    #These arguments will be dependent on user input.
-    #User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
+    # These arguments will be dependent on user input.
+    # User will check visualizations and other experiment variables to decide input to optimize the experiment to their needs.
 
     species = ""
-    tissue = "\"\""
-    K = 450
-    m = 20
+    tissue = "tissue"
+    K = 300
+    m = 15
 
-    #Not required, but highly recommended
+    # Not required, but highly recommended
     adata_path = "adata.h5ad"
     markers_path = ""
     annotate_limit = 0.3
 
-    #Other
-    interrupt=True
+    # Other
+    interrupt = True
+    tsne = False
 
     """Command line argument syntax"""
     markers_path_arg = "--markers"
@@ -127,6 +155,7 @@ try:
     tissie_arg = "--tissue"
     K_arg = "--K"
     m_arg = "--bins"
+    plot_arg = "--plot"
     disable_interrupt_arg = "-disable_interrupts"
 
     """Parse arguments"""
@@ -151,9 +180,25 @@ try:
         # Other
         elif disable_interrupt_arg in arg:
             interrupt = False
+        elif plot_arg+"=" in arg:
+            plot_input = arg[arg.index("=")+1:].lower()
+            if plot_input == "tsne" or plot_input == "t-sne": tsne = True
         else:
             sys.exit(arg + " is not a valid argument!")
     log("Successfully parsed command arguments")
+
+    plot_log = "umap"
+    if tsne: plot_log = "tsne"
+    log("\n***Parameters***\n"
+        "adata path: " + adata_path + "\n"
+        "marker gene file: " + markers_path + "\n"
+        "species: " + species + "\n"
+        "tissue: " + tissue + "\n"
+        "K: " + str(K) + "\n"
+        "m: " + str(m) + "\n"
+        "plot: "+plot_log+"\n"
+        "interrupt: " + str(interrupt) + "\n"
+        "****************\n")
 
     """Load adata"""
     #Check validity of  filepath
@@ -170,6 +215,9 @@ try:
             assert entry[:-2].isalpha() and entry[-2:] == "-1", "Entries in barcodes.tsv are NOT in the correct format: " + entry
         except IndexError:
             break
+
+    # V&V plot parameter
+    if (not 'X_umap' in adata.obsm) and 'X_tsne' in adata.obsm: tsne = True
 
     print("Successfully loaded adata!")
     log("Successfully loaded adata")
@@ -193,71 +241,84 @@ try:
 
     #Allow users to use own marker gene file
     marker_loaded = False
+    retried = False
     if not markers_path == "":
         try:
+            #Check if direct path or in marker directory
+            if os.path.isfile(marker_dir+markers_path):
+                markers_path = marker_dir+markers_path
+
             ref_marker = ct.read_markers_from_file(markers_path)
+
+            #V&V. Transpose and retry if fail.
+            if not VV_markers(ref_marker): #Retry loading file after transposing
+                #Transpose data
+                df = pd.read_csv(markers_path, header=None)
+                df = df.T
+                markers_path = markers_path[:-4] + "_corrected.csv"
+
+                #Remove first numerical column
+                new_header = df.iloc[0]
+                df = df[1:]
+                df.columns = new_header
+                df.to_csv(markers_path, header=True)
+
+                retried = True
+                ref_marker = ct.read_markers_from_file(markers_path)  # Only with this can we properly check if the data is formated correctly
+                assert not ref_marker.empty, "Failed to load marker gene file: " + markers_path
+
+                #Upon Success
+                print("Marker gene file was in an incorrect format and has been transposed to \""+markers_path+"\".")
+                log("Marker gene file was in an incorrect format and has been transposed to \""+markers_path+"\".")
             print("Using marker file: \"" + markers_path + "\"")
             log("Loaded marker gene file \"" + markers_path + "\"")
             marker_loaded = True
-
-            # Additional V&V (read_markers_from_file already checks for formating)
-            assert ref_marker.empty, ""
         except:
-            print("Failed to load marker gene file. Try again using annotate.py or continue to use provided marker gene data.")
-            log("Failed to load marker gene file")
+            if retried:
+                os.remove(markers_path)  # For discretion if failed, otherwise allow user to keep
+                traceback.print_exc()
+                print("There is an issue with the file format. Correct the file or continue to use provided marker gene data (Human and Mouse only).")
+                log("There is an issue with the file format")
+            else:
+                print("Failed to load marker gene file. Try again or continue to use provided marker gene data (Human and Mouse only).")
+                log("Failed to load marker gene file")
 
     # Otherwise use default marker data
     if not marker_loaded:
+        print("Retrieving information from Cell Marker. Note only Human and Mouse data are available!\n"
+              "If your species is neither of those, please provide a marker gene file.")
         # Prompt for species argument
         while species == "":
             species_prompt = input("Input species of the dataset: ")
             if not species_prompt == "":
                 species = species_prompt
 
-        # Use 'species' to collect marker gene file
-        species = species[0].upper() + species[1:].lower()
-        if species == "Drosophila melanogaster" or species == "Fruitfly" or species == "D_melanogaster":
-            markers_path = marker_dir + 'D_melanogaster_genes.csv'
-            assert os.path.isfile(markers_path), 'D_melanogaster_genes.csv is missing from ' + markers_path + "!"
-        elif species == "Mouse-ear cress" or species == "Mouse ear cress" or species == "Thale cress" or species == "Arabidopsis thaliana" or species == "A_thaliana":
-            markers_path = marker_dir + 'A_thaliana_genes.csv'
-            assert os.path.isfile(markers_path), 'A_thaliana_genes.csv is missing from ' + markers_path + "!"
-        elif species == "Dario rerio" or species == "Zebrafish":
-            markers_path = marker_dir + 'Dario_rerio_genes.csv'
-            assert os.path.isfile(markers_path), 'Dario_rerio_genes.csv is missing from ' + markers_path + "!"
-        # Retrieve data from Cell Marker useing ct.get_markers_from_db(species, tissue)
-        else:
-            # Change keyword to match format if applies
-            if species == "Homo sapian":
-                species = "Human"
-            elif species == "Mus musculus":
-                species = "Mouse"
+        # Change keyword to match format if applies
+        if species == "Homo sapien" or species == "Homo sapiens":
+            species = "Human"
+        elif species == "Mus musculus":
+            species = "Mouse"
 
-            # V&V: Assert if species not available
-            assert species == "Mouse" or species == "Human", "Could not find information for " + species + ". Please provide a marker gene file for that species in \"annotate.py\"."
+        # V&V: Assert if species not available
+        assert species == "Mouse" or species == "Human", "Could not find information for " + species + ". Please provide a marker gene file for that species in \"annotate.py\"."
 
-            # Prompt for tissue argument
-            while tissue == "\"\"" or tissue == "":
-                tissue_prompt = input("Input tissue of the dataset: ")
-                if not tissue_prompt == "":
-                    tissue = tissue_prompt
-            tissue = tissue[0].upper() + tissue[1:].lower()
+        # Prompt for tissue argument
+        while tissue == "tissue" or tissue == "":
+            tissue_prompt = input("Input tissue of the dataset: ")
+            if not tissue_prompt == "":
+                tissue = tissue_prompt
+        tissue = tissue[0].upper() + tissue[1:].lower()
 
-            # Retrieve data from Cell Marker
-            print("Retrieving marker gene data...")
-            ref_marker = ct.get_markers_from_db(species, tissue)
-            print("Using species=" + species + " and tissue=" + tissue)
-            log("Using Cell Marker with species=" + species + " tissue=" + tissue + " for marker gene reference")
-            marker_loaded = True
+        # Retrieve data from Cell Marker
+        print("Retrieving marker gene data...")
+        ref_marker = ct.get_markers_from_db(species, tissue)
+        print("Using species=" + species + " and tissue=" + tissue)
+        log("Using Cell Marker with species=" + species + " tissue=" + tissue + " for marker gene reference")
+        marker_loaded = True
 
-            # V&V: Assert if empty (due to tissue)
-            # if species == "Human" or species == "Mouse":
-            assert not ref_marker.empty, "Could not find information on " + tissue + " for " + species + ". Please try again using a different keyword for \'tissue\' on \"annotate.py\"."
-
-        if not marker_loaded:
-            print("Using species=" + species)
-            ref_marker = ct.read_markers_from_file(markers_path)
-            log("Loaded marker gene file \"" + markers_path + "\"")
+        # V&V: Assert if empty (due to tissue)
+        # if species == "Human" or species == "Mouse":
+        assert not ref_marker.empty, "Could not find information on " + tissue + " for " + species + ". Please try again using a different keyword for \'tissue\' on \"annotate.py\"."
 
     #Calculate statistics
     sc.tl.rank_genes_groups(adata, 'leiden', method='t-test')
@@ -281,19 +342,20 @@ try:
 
     #Visualize results
     if interrupt:
-        sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue], show=False)
-        save_figure("annotation_plot.png")
+        plot(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
+        save_figure("annotation_plot.png", final_plot_dir)
 
     # V&V cluster results
     if not '1' in adata.obs['leiden'].to_list():
         print("WARNING: Only one cluster was created! Please increase the cluster resolution!")
 
     #Repeated prompt for K, m, and cluster_res; recalculate annotation, and display results until user is satisfied.
+    print("*Take this opportunity to experiment with different parameters regarding just the annotation process.*")
     cluster_res = 0.5
     res_i = 1
     ann_i = 1
     while True:
-        #Prompt for cluster resolution
+        # Prompt for cluster resolution
         while interrupt or not ('1' in adata.obs['leiden'].to_list()):
             try:
                 prompt = input("Enter a decimal to change the cluster resolution (current: " + str(cluster_res) + ") or leave blank to keep the results: ")
@@ -304,12 +366,13 @@ try:
                         break
                 cluster_res = float(prompt)
                 sc.tl.leiden(adata, resolution=cluster_res)
-                sc.pl.umap(adata, color=['leiden'], show=False)
-                save_figure("cluster_("+str(res_i)+").png")
+                plot(adata, ['leiden'], "cluster_res=" + str(cluster_res))
+                save_figure("cluster_(" + str(res_i) + ").png", image_directory)
                 res_i += 1
-            except:
+            except ValueError:
                 if not prompt == "":  # Not a crash due to mono-cluster warning
                     print("You must enter a decimal value!")
+
         print("Using cluster resolution of: " + str(cluster_res))
 
         # Calculate statistics
@@ -321,15 +384,17 @@ try:
 
         background = adata.var.index.tolist()
 
-        #Repeat the previous steps and allow user to adjust K and m until satisifed.
+        # Repeat the previous steps and allow user to adjust K and m until satisifed.
         while interrupt:
             try:
-                prompt = input("Enter a value for the top K genes to include in scoring (current: " + str(K) + ") or leave blank to keep the results." +
+                prompt = input("Enter a value for the top K genes to include in scoring (current: " + str(K) + ") or leave blank to keep the value." +
                                "\nOr enter \"cluster\" to re-adjust cluster resolution or \"exit\" to exit: ")
-                if prompt == "cluster" or prompt == "exit": break
-                elif not prompt == "": K = int(prompt)
+                if prompt == "cluster" or prompt == "exit":
+                    break
+                elif not prompt == "":
+                    K = int(prompt)
 
-                prompt = input("Enter a value for the m number of bins to use to divide the gene ranking (current: " + str(m) + ") or leave blank to keep the results: ")
+                prompt = input("Enter a value for the m number of bins to use to divide the gene ranking (current: " + str(m) + ") or leave blank to keep the value: ")
                 if not prompt == "": m = int(prompt)
 
                 ct_pval, ct_score = ct.celltype_scores(nb_bins=m,
@@ -337,11 +402,12 @@ try:
                                                        K_top=K,
                                                        marker_ref=ref_marker,
                                                        background_genes=background)
-                adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval, ct_score_df=ct_score)
+                adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval,
+                                                             ct_score_df=ct_score)
                 VnV_classification()
-                sc.pl.umap(adata, color=['cell_type'], title=['Cell Type Annotation for ' + species + " " + tissue], show=False)
-                save_figure("annotation_plot_("+str(ann_i)+").png")
-                ann_i+=1
+                plot(adata, ['cell_type'], "K=" + str(K) + ", m=" + str(m) + ", cluster_res=" + str(cluster_res))
+                save_figure("annotation_plot_(" + str(ann_i) + ").png", final_plot_dir)
+                ann_i += 1
             except:
                 print("\nYou must enter integer values!")
         if (not interrupt) or prompt == "exit": break
@@ -349,7 +415,7 @@ try:
     #Export results as an excel
     adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
     output_name = species+"_"
-    if not tissue == "\"\"":
+    if not tissue == "tissue":
         output_name += tissue +"_"
     output_name = "annotate_run" + str(run_num) + "_" + output_name + "annotation.xlsx"
     adata.obs.to_excel(annotation_dir+output_name)
@@ -357,6 +423,20 @@ try:
 
     #Message about other python script
     print("*Annotation exported to \'"+output_name+'\'*')
+
+    # Log final parameters if on interrupt run
+    if interrupt:
+        log("\n***Final Parameters***\n"
+            "adata path: " + adata_path + "\n"
+            "marker gene file: " + markers_path + "\n"
+            "species: " + species + "\n"
+            "tissue: " + tissue + "\n"
+            "cluster resolution: " + str(cluster_res) + "\n"
+            "K: " + str(K) + "\n"
+            "m: " + str(m) + "\n"
+            "plot: "+plot_log+"\n"
+            "interrupt: " + str(interrupt) + "\n"
+            "***********************")
 
     log("*Program finished running without any errors*")
 except Exception:
