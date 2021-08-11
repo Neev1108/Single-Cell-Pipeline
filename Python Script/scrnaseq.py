@@ -78,7 +78,7 @@ import os
 import traceback
 
 #Directories
-log_dir = "Preprocessing_Scripts/02-Scanpy/VV_Logs/"
+log_dir = "Preprocessing_Scripts/02-Scanpy/VV_logs/"
 image_directory = "Preprocessing_Scripts/02-Scanpy/Images/"
 marker_dir = "Preprocessing_Scripts/03-ScoreCT/Marker_genes/"
 adata_dir = ""
@@ -332,7 +332,7 @@ try:
 
     """Overview Data"""
     print("Number of cells: "+str(adata.n_obs))
-    print("Numebr of genes: "+str(adata.n_vars))
+    print("Number of genes: "+str(adata.n_vars))
 
     #Display a graph for the highest expressed genes
     """
@@ -755,6 +755,7 @@ try:
             if not species_prompt == "":
                 species = species_prompt
 
+        species = species[0].upper() + species[1:].lower()
         #Change keyword to match format if applies
         if species == "Homo sapien" or species == "Homo sapiens":
             species = "Human"
