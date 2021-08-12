@@ -26,7 +26,10 @@ def VnV_classification():
     for classification in adata.obs['cell_type']:
         if classification.lower() == "na" or pd.isnull(classification):
             count+=1
-    print(str(count)+"/"+str(adata.n_obs)+" cells were not able to be classified. Try adjusting the parameters.")
+    if count > 0:
+        print(str(count)+"/"+str(adata.n_obs)+" cells were not able to be classified. Try adjusting the parameters.")
+    else:
+        print("All cells were classified!")
 
     assert not count == adata.n_obs, "None of the cells were able to be classified! Try using a different marker gene file and double check format."
     if (count/adata.n_obs) > annotate_limit:
@@ -52,17 +55,24 @@ def plot(adata, color, title=""):
         else:
             sc.pl.umap(adata, color=color, title=title, show=False)
 
+def plot_annotation(adata, color, title):
+    sc.set_figure_params(figsize=(10, 10))
+    if tsne:
+        sc.pl.tsne(adata, color=color, title=title, legend_loc='on data', show=False)
+    else:
+        sc.pl.umap(adata, color=color, title=title, legend_loc='on data', show=False)
+
 """Setup Log File
 Log major outputs and actions for validation and verification of a successfully run program."""
 import os
 import traceback
 
 # Directories
-log_dir = "Preprocessing_Scripts/02-Scanpy/VV_logs/"
-image_directory = "Preprocessing_Scripts/02-Scanpy/Images/"
-marker_dir = "Preprocessing_Scripts/03-ScoreCT/Marker_genes/"
-annotation_dir = "Preprocessing_Scripts/03-ScoreCT/Annotation_Exports/"
-final_plot_dir = "Preprocessing_Scripts/03-ScoreCT/tSNE_UMAP/"
+log_dir = "../../02-Scanpy/VV_logs/"
+image_directory = "../../02-Scanpy/Images/"
+marker_dir = "../../03-ScoreCT/Marker_genes/"
+annotation_dir = "../../03-ScoreCT/Annotation_Exports/"
+final_plot_dir = "../../03-ScoreCT/tSNE_UMAP/"
 
 run_num = 1
 while os.path.exists(log_dir+"annotate_run"+str(run_num)+".txt") or os.path.exists(image_directory+"annotate_run"+str(run_num)+".png"):
@@ -70,61 +80,59 @@ while os.path.exists(log_dir+"annotate_run"+str(run_num)+".txt") or os.path.exis
 file = open(log_dir+"annotate_run"+str(run_num)+".txt", "w")
 print("Created log file \"annotate_run"+str(run_num)+".txt\" in "+log_dir)
 
-#Set up Image Directory
-image_directory = image_directory + "annotate_run" + str(run_num) + "/"
-os.mkdir(image_directory)
-print("Images will be automatically saved at \"" + image_directory + "\"")
-log("Set up \"images/annotate run" + str(run_num) + "/\" directory")
-
-#Set up Final Plot Directory
-final_plot_dir = final_plot_dir + "annotate_run" + str(run_num) + "/"
-os.mkdir(final_plot_dir)
-print("Anntation plot will be automatically saved at \"" + final_plot_dir+ "\"")
-log("Set up \"annotate_run" + str(run_num) + "/\" directory"+final_plot_dir)
-
 """***Program starts here***
 Try-catch statement used to log exceptions."""
 try:
     """Import or Install Libraries"""
-    while True:
-        try:
-            print("Loading packages...")
-            import sys
-            import os
-            import subprocess
+    try:
+        print("Loading packages...")
+        import sys
+        import os
+        import subprocess
 
-            import pandas as pd
-            import matplotlib.pyplot as plt
-            import scanpy as sc
-            import scorect_api as ct
-            import openpyxl
-            break
-        except:
-            print("***Some packages have not been installed. Installing now...***")
-            log("Some packages have not been installed. Attempting to install...")
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import scanpy as sc
+        import scorect_api as ct
+        import openpyxl
+    except:
+        print("***Some packages have not been installed. Installing now...***")
+        log("Some packages have not been installed. Attempting to install...")
 
-            # Retrieve installer if not available
-            import urllib.request
-            remove = False
-            if not os.path.exists("get-pip.py"):
-                urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
-                remove = True
-            subprocess.check_call([sys.executable, "get-pip.py"])
+        # Retrieve installer if not available
+        import urllib.request
+        remove = False
+        if not os.path.exists("get-pip.py"):
+            urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
+            remove = True
+        subprocess.check_call([sys.executable, "get-pip.py"])
 
-            # Download and install packages if not installed
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+        # Download and install packages if not installed
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
 
-            if not os.path.exists("scorect_api.py"):
-                urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
-                # Required by scorect_api
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+        if not os.path.exists("scorect_api.py"):
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
+            # Required by scorect_api
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
 
-            # Remove installer if it wasn't available before for discretion
-            if remove: os.remove("get-pip.py")
-            log("Succesfully installed packages")
+        # Remove installer if it wasn't available before for discretion
+        if remove: os.remove("get-pip.py")
+        log("Succesfully installed packages")
+
+        # Try importing packages again. If fail, proceed with normal crash protocol
+        print("Attempting to loading packages again. If program crashes, please install package on your own or re-run program.")
+        import sys
+        import os
+        import subprocess
+
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import scanpy as sc
+        import scorect_api as ct
+        import openpyxl
     print("Package import success!")
     log("Successfully loaded packages")
 
@@ -200,6 +208,23 @@ try:
         "interrupt: " + str(interrupt) + "\n"
         "****************\n")
 
+    """Finish setting up directories"""
+    output_name = species
+    if not tissue == "\"\"":
+        output_name += "_"+tissue
+
+    # Set up Image Directory
+    image_directory = image_directory + "annotate_run" + str(run_num) + "_"+output_name + "/"
+    os.mkdir(image_directory)
+    print("Images will be automatically saved at \"" + image_directory + "\"")
+    log("Set up \"annotate_run" + str(run_num) + "_"+output_name + "/\" directory in " + image_directory)
+
+    # Set up Final Plot Directory
+    final_plot_dir = final_plot_dir + "annotate_run" + str(run_num) + "_"+output_name + "/"
+    os.mkdir(final_plot_dir)
+    print("Anntation plot will be automatically saved at \"" + final_plot_dir + "\"")
+    log("Set up \"annotate_run" + str(run_num) + "_"+output_name + "/\" directory" + final_plot_dir)
+
     """Load adata"""
     #Check validity of  filepath
     if not os.path.isfile(adata_path):  # Corrupted cellranger output (that isn't pointed to data)
@@ -247,6 +272,8 @@ try:
             #Check if direct path or in marker directory
             if os.path.isfile(marker_dir+markers_path):
                 markers_path = marker_dir+markers_path
+            else:
+                assert os.path.isfile(markers_path), "Could not find file. Please place marker gene files in "+marker_dir+"."
 
             ref_marker = ct.read_markers_from_file(markers_path)
 
@@ -343,7 +370,7 @@ try:
 
     #Visualize results
     if interrupt:
-        plot(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
+        plot_annotation(adata, color=['cell_type'], title=['Cell Type Annotation for '+species+" "+tissue])
         save_figure("annotation_plot.png", final_plot_dir)
 
     # V&V cluster results
@@ -351,11 +378,12 @@ try:
         print("WARNING: Only one cluster was created! Please increase the cluster resolution!")
 
     #Repeated prompt for K, m, and cluster_res; recalculate annotation, and display results until user is satisfied.
-    print("*Take this opportunity to experiment with different parameters regarding just the annotation process.*")
+    if interrupt:
+        print("*Take this opportunity to experiment with different parameters regarding just the annotation process.*")
     cluster_res = 0.5
     res_i = 1
     ann_i = 1
-    while True:
+    while interrupt or not ('1' in adata.obs['leiden'].to_list()):
         # Prompt for cluster resolution
         while interrupt or not ('1' in adata.obs['leiden'].to_list()):
             try:
@@ -406,7 +434,7 @@ try:
                 adata.obs['cell_type'] = ct.assign_celltypes(cluster_assignment=adata.obs['leiden'], ct_pval_df=ct_pval,
                                                              ct_score_df=ct_score)
                 VnV_classification()
-                plot(adata, ['cell_type'], "K=" + str(K) + ", m=" + str(m) + ", cluster_res=" + str(cluster_res))
+                plot_annotation(adata, ['cell_type'], "K=" + str(K) + ", m=" + str(m) + ", cluster_res=" + str(cluster_res))
                 save_figure("annotation_plot_(" + str(ann_i) + ").png", final_plot_dir)
                 ann_i += 1
             except:
@@ -415,12 +443,9 @@ try:
 
     #Export results as an excel
     adata.obs = adata.obs.rename(columns={"leiden":"cluster"})  #Rename to avoid confusion
-    output_name = species+"_"
-    if not tissue == "tissue":
-        output_name += tissue +"_"
-    output_name = "annotate_run" + str(run_num) + "_" + output_name + "annotation.xlsx"
-    adata.obs.to_excel(annotation_dir+output_name)
-    VV_file_save(annotation_dir, output_name, "Exported \"" + output_name + "\"")
+    ann_output_name = "annotate_run" + str(run_num) + "_" + output_name + "_annotation.xlsx"
+    adata.obs.to_excel(annotation_dir+ann_output_name)
+    VV_file_save(annotation_dir, ann_output_name, "Exported \"" + ann_output_name + "\"")
 
     #Message about other python script
     print("*Annotation exported to \'"+output_name+'\'*')

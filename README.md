@@ -302,7 +302,7 @@ This program will be an interactive experience and will provide the user opportu
 The majority of these arguments will be prompted during a program run with interruptions making most command arguments optional. The only required argument is ```--filepath``` for the location and directory name of the cellranger output.
 
 ```
-scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts]
+python3 scrnaseq.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
 [--min_cells THRESHOLD] [--min_genes THRESHOLD] [--neighbors K]
 [--res CLUSTER_RESOLUTION] [--genes GENES] [--species SPECIES]
 [--tissue TISSUE]
@@ -310,8 +310,9 @@ scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts]
 --filepath CELLRANGER_OUTPUT (REQUIRED)
 	File path of the cellranger output folder.
 -disable_interrupts
-	Disable program interruptions for user analysis and argument 
-	prompt. 
+	Disable program interruptions for user analysis and 	argument prompt.
+--plot PLOT (default: umap)
+	Visualize the data using ```umap``` or ```t-SNE```. 
 --min_cells THRESHOLD (default: 1)
 	The minimum number of cells that a gene has to be expressed 
 	in to pass the filter.
@@ -331,9 +332,13 @@ scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts]
 	Provide a marker gene file to annotate the data. Format 
 	described below.
 --species SPECIES (default: "")
-	Species of the sample (ex. human, mouse, etc.). Not 	required if marker gene file was provided.
+	Species of the sample (ex. human, mouse). Will be used to 
+	retrieve marker gene data if file not provided (Human and 
+	Mouse only).
 --tissue TISSUE (default: "")
-	Tissue type of the sample (ex. brain, heart, etc.). Not 	required if marker gene file was provided.
+	Tissue type of the sample (ex. brain, heart, etc.). Will 
+	be used to retrieve marker gene data if file not provided 
+	(Human and Mouse only).
 --K TOP_K (default: 450)
 	Top K genes to include in annotation scoring.
 --bins M (default: 20)
@@ -347,7 +352,7 @@ scrnaseq.py --filepath CELLRANGER_OUTPUT [-disable_interrupts]
 
 This section would let the user analyze the distribution of the data and select a threshold for filtering cells and genes to remove unwanted or contaminated data. Since datasets vary, it is highly encourged users take the time to determine an accurate value than rely on default values.
 
-3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time. Note that none of the images will be automatically saved! 
+3 different graphs will be displayed in a new window for the user to analyze. The program will stall until the user closes the window of the graph. Only one graph will be displayed at a time.
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
@@ -364,7 +369,7 @@ The first graph that will pop up will show boxplox distributions of the highest 
 
 ---
 
-## 2b Gene distribution
+## 2b Gene and Cell distribution
 
 The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
@@ -372,21 +377,7 @@ The distribution of the number of genes expressed in cells will be shown. Users 
 Input min_genes threshold or leave blank to use default settings: 
 ```
 
-After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed.
-
-
-
----
-
-## 2c Cell distribution
-
-Next, the distribution of the number of cells that has a certain gene expressed. Users are encouraged to use this graph to determine an 'x' value as the minimum number of cells required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
-
-```
-Input min_cells threshold or leave blank to use 1:
-```
-
-After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of cells threshold. Leaving the prompt blank would use the default value or the argument value if it was passed.
+After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed. This would be repeated for the cell distribution.
 
 Output: 
 -Filtered adata
@@ -398,13 +389,14 @@ Output:
 
 The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No arguments are required for this step and the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
 
-```
-sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
-adata = adata[:, adata.var.highly_variable==False]
-```
-
 <details>
   <summary>Explanation of the Algorithm</summary>
+
+
+  ```
+  sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
+  ```
+
 
   This program use's R's Seurat's algorithm.
 
@@ -419,50 +411,30 @@ Output
 
 ## 4 Clustering
 
-Once the data has been cleaned through filtering, the data is ready to be clustered to determine similarities and pattersns within the data.
+Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z#:~:text=Unlike%20the%20Louvain%20algorithm%2C%20the,moved%20to%20a%20different%20community.). 
 
----
+The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k can be ajusted using ```--neighbors``` (this parameter will not be prompt during a program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. 
 
-## 4a KNN
-
-Before Leiden clustering could be performed, the distance must be calculated for each cell. This is done using the K-Nearest Neighbors algorithm (KNN) which calculates euclidean distances based on the "votes" of its neighbors. The top number of neighbors to vote (also known as "k") could be provided by the user using ```--neighbors```. There will not a prompt for this and providing a new 'k' is entirely optional.
-
-Note: the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. It should also be noted this is the most computationally intense portion of the program.
-
-Output:
--Distances caculated for each cell in adata
--PCA calculated in adata
-
----
-
-## 4b Leiden Clustering
-
-Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z#:~:text=Unlike%20the%20Louvain%20algorithm%2C%20the,moved%20to%20a%20different%20community.). The Leiden algorithm uses the distances calculated in ```neighbors``` to perform its calculation. 
+After this is done, a window will pop to display a plot visualizing the clusters. Close the graphs to move on with the program.
 
 Output:
 -Cluster classification values for each cell in adata
 
 ---
 
-## 4c Visualization
+## 4a Cluster Revisited: Resolution
 
-A window will pop to display a UMAP graph visualizing the clusters. Close the graphs to move on with the program. Note that the images will be automatically saved!
+At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution. 
 
----
-
-## 4d Cluster Revisited: Resolution
-
-At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the *cluster resolution. 
-
-Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```1.0```.
+Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
 
 The user can repeatedly adjust and view the results of the cluster until they are satisfied. To continue with the program, simply give a blank input.
 
-## 5 Visualization
+---
 
-## 5a Gene Expression
+## 5 Gene Expression Visualization
 
-The program will display another UMAP graph, this time to view gene expression. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will display the first 2 genes' plot in adata as a sample.
+The program will display another plot to view gene expression. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will sample the first 2 genes in the data.
 
 ---
 
@@ -496,7 +468,7 @@ Output:
 
 ## 6 Data Annotation
 
-The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ``adata.h5ad``` which is used in ```annotate.py```.
+The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ```run#_adata.h5ad``` which is used in ```annotate.py```.
 
 ---
 
@@ -510,7 +482,7 @@ The following steps could be repeated using ```annotate.py``` should the user wa
 
 ## 6b Visualization
 
-Once the program finishes annotating the data, the program will display a UMAP of the clustered results for the user to view. Close this window to continue the program. Note that this image will not be automatically saved!
+Once the program finishes annotating the data, the program will display a UMAP of the clustered results for the user to view. Close this window to continue the program.
 
 ---
 
