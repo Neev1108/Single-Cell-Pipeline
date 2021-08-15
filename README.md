@@ -374,31 +374,18 @@ Because it is more common to find files that follow this format but tranposed (i
 ## 1e Directory Structure
 
 > 00-Raw_Data
-
 > ├── Fastq
-
 > ├── FastQC_Reports
-
 > 01-CellRanger
-
 > ├── CellRanger_Output
-
 > ├── Reference_Annotation
-
 > 02-Scanpy
-
 > ├── Adata
-
 > ├── Images
-
 > ├── VV_logs
-
 > 03-ScoreCT
-
 > ├── Annotation_Exports
-
 > ├── Marker_genes
-
 > ├── tSNE_UMAP
 
 ---
