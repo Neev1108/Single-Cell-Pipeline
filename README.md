@@ -81,23 +81,41 @@ This command only has one parameter:
 * `--attribute` – Use this command multiple times to filter our genes. An example is below.
 
 > **
+>
 > --attribute=gene_biotype:protein_coding
+>
 > --attribute=gene_biotype:lincRNA
+>
 > --attribute=gene_biotype:antisense
+>
 > --attribute=gene_biotype:IG_LV_gene
+>
 > --attribute=gene_biotype:IG_V_gene
+>
 > --attribute=gene_biotype:IG_V_pseudogene
+>
 > --attribute=gene_biotype:IG_D_gene
+>
 > --attribute=gene_biotype:IG_J_gene
+>
 > --attribute=gene_biotype:IG_J_pseudogene
+>
 > --attribute=gene_biotype:IG_C_gene
+>
 > --attribute=gene_biotype:IG_C_pseudogene
+>
 > --attribute=gene_biotype:TR_V_gene
+>
 > --attribute=gene_biotype:TR_V_pseudogene
+>
 > --attribute=gene_biotype:TR_D_gene
+>
 > --attribute=gene_biotype:TR_J_gene
+>
 > --attribute=gene_biotype:TR_J_pseudogene
+>
 > --attribute=gene_biotype:TR_C_gene
+>
 > **
 
 Output:
@@ -209,22 +227,39 @@ These will need to be renamed as shown above.
 The final file structure for the fastq files will look like below (this is for Arabidopsis):
 
 > Arabidopsis_dataset
+>
 > .
+>
 > ├── SRR13040579_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040579_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040580_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040580_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040581_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040581_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040582_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040582_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040583_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040583_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040584_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040584_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040585_S1_L001_R1_001.fastq.gz
+>
 > ├── SRR13040585_S1_L001_R2_001.fastq.gz
+>
 > ├── SRR13040586_S1_L001_R1_001.fastq.gz
+>
 > └── SRR13040586_S1_L001_R2_001.fastq.gz
 
 
@@ -374,18 +409,31 @@ Because it is more common to find files that follow this format but tranposed (i
 ## 1e Directory Structure
 
 > 00-Raw_Data
+>
 > ├── Fastq
+>
 > ├── FastQC_Reports
+>
 > 01-CellRanger
+>
 > ├── CellRanger_Output
+>
 > ├── Reference_Annotation
+>
 > 02-Scanpy
+>
 > ├── Adata
+>
 > ├── Images
+>
 > ├── VV_logs
+>
 > 03-ScoreCT
+>
 > ├── Annotation_Exports
+>
 > ├── Marker_genes
+>
 > ├── tSNE_UMAP
 
 ---
