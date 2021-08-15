@@ -921,7 +921,7 @@ try:
             "***********************")
 
     #Message about other python script
-    print("*Annotation exported to \'"+ann_output_name+'annotation.xlsx\'*')
+    print("*Annotation exported to \'"+ann_output_name+'\'*')
     log("*Program finished running without any errors*")
 except Exception:
     traceback.print_exc()
