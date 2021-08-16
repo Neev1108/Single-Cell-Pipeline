@@ -3,7 +3,7 @@
 #SBATCH -J cellranger_job_mkref
 #SBATCH --export=ALL
 #SBATCH --signal=2
-#SBATCH -output="cellranger_job_counts.%J.out"
+#SBATCH -output="cellranger_job_mkgtf.%J.out"
 #SBATCH --mem=40g
 
 

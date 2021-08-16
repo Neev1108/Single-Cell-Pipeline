@@ -10,8 +10,6 @@
 
 echo Beginning Cellranger count Script....
 
-input_dir=data3/GL_SJSU_2021_Interns/Project3_scRNAseq_pipeline
-out_dir=data3/GL_SJSU_2021_Interns/Project3_scRNAseq_pipeline
 
 
 start=$(date +%s)
