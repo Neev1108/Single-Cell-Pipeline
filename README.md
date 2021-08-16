@@ -5,7 +5,7 @@
 R# Table of contents
 
 - [**Software used**](#software-used)
-- [**Cellranger**](cellranger)
+- [**Cellranger**](#Cellranger)
   - **1. Cellranger - make reference transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
