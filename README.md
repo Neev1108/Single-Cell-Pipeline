@@ -14,8 +14,7 @@ R# Table of contents
   - **2. Cellranger Counts Setup**
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cellranger counts**](#2b-cellranger-counts)
-  - [**3. Cellranger Output**](#3-build-star-reference)
-- [**scRCT and annotate Python Script**](#scRCT-and-annotate-Python-Script) 
+- [**scRCT and annotate Python Script**](#scRCT-and-annotate-Python-Script)
   - [**1. Setup and Introduction**](#1-setup-and-introduction)
     - [**1a. Packages**](#1a-packages)
     - [**1b. Prompts**](#1b-prompts)
@@ -260,7 +259,6 @@ The final file structure for the fastq files will look like below (this is for A
 >
 > └── SRR13040586_S1_L001_R2_001.fastq.gz
 
-
 ### 2b Cellranger Counts
 
 Now we will actually run the cellranger counts method. (Note. This may be computationally intensive, mostly on RAM. Please check your system specs to make sure it works correctly)
@@ -328,7 +326,7 @@ This program requires the following packages: ```NumPy```, ```PANDAS```, ```Scan
 
 ### 1b Prompts
 
-This program will be an interactive experience and will provide the user opportunities to view the data and pass a parameter at each step of the process. Users can also pass the ```-disable_interrupts``` argument to disable this feature and run the program without any interruptions. 
+This program will be an interactive experience and will provide the user opportunities to view the data and pass a parameter at each step of the process. Users can also pass the ```-disable_interrupts``` argument to disable this feature and run the program without any interruptions.
 
 IMPORTANT NOTE: If the program is in an environment where it cannot pop-up a new window to display the plots, remember that plot images are immediately saved in the ```Images``` folder and can be viewed while running the program.
 
@@ -369,7 +367,7 @@ python3 scRCT.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
 	A list of comma (,) separated genes to visualize gene 
 	expression once the data has been filtered.
 --species SPECIES (default: "")
-	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.	
+	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.
 --tissue TISSUE (default: "")
 	Tissue type of the sample (ex. brain, heart, etc.). Will 
 	be used to retrieve marker gene data if file not provided 
@@ -434,7 +432,7 @@ Because it is more common to find files that follow this format but tranposed (i
 >
 > ├── [tSNE_UMAP](#5a-visualization)
 
-The directory structure is listed above and can be quickly created using ```scRNAseq_mkdir.sh```. Each hyperlink wlll lead to the section where that directory will be used. 
+The directory structure is listed above and can be quickly created using ```scRNAseq_mkdir.sh```. Each hyperlink wlll lead to the section where that directory will be used.
 
 For each run of the program, a new ```run#_*species*_*tissue*``` directory will be created in the ```Images``` and ```tSNE_UMAP``` folder to organize each run's image output. For ```annotate.py```, it will be named ```annotate_run#_*species*_*tissue*``` instead. The name is based on the number of runs of the program, and the species and tissue inputed. Other outputs will be named similarly.
 
@@ -451,7 +449,7 @@ Input min_genes threshold or leave blank to use default settings:
 Input min_cells threshold or leave blank to use 1:
 ```
 
-Default values are provided should the user not provide an input and leave the input blank. 
+Default values are provided should the user not provide an input and leave the input blank.
 
 ---
 
@@ -479,20 +477,18 @@ After closing the window for the graph, the user would then be prompted to enter
 
 ### 2c Remove Highly Variable Genes
 
-The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
+The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable.
 
 <details>
   <summary>Explanation of Algorithm</summary>
 
+```
+sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
+```
 
-  ```
-  sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
-  ```
+This program use's R's Seurat's algorithm.
 
-
-  This program use's R's Seurat's algorithm.
-
-  Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
 
 </details>
 
@@ -505,9 +501,9 @@ Output:
 
 ## 3 Clustering
 
-Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z). 
+Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z).
 
-The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k can be ajusted using ```--neighbors``` (this parameter will not be prompt during a program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. 
+The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k can be ajusted using ```--neighbors``` (this parameter will not be prompt during a program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored.
 
 After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graphs to move on with the program.
 
@@ -521,7 +517,7 @@ Output:
 
 ### 3a Clustering Revisited: Resolution
 
-At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution. 
+At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution.
 
 Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
 
@@ -581,7 +577,7 @@ Once the program finishes annotating the data, the program will display a final 
 
 ### 5ai Annotation Revisited: Parameter tuning
 
-At this stage, the user would be able to see the results of the annotation and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m. 
+At this stage, the user would be able to see the results of the annotation and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m.
 
 Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
 
@@ -597,9 +593,9 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 ![Annotation output excel file](https://drive.google.com/uc?export=view&id=19uVckwG7VSTjeI6OY7z817G5TXKhak4r)
 
-The last step program will do is export an .xlsx file with the annotated data. The file will be exorted to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns: 
+The last step program will do is export an .xlsx file with the annotated data. The file will be exorted to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns:
 
-- The sequence is the raw cell sequence from the fastq files 
+- The sequence is the raw cell sequence from the fastq files
 - n_genes: the number of genes expressed in the cell
 - cluster: the cluster group the cell is in
 - cell_type: annotation of the cell
@@ -626,7 +622,7 @@ python3 annotate.py --adata=FILEPATH [-disable_interrupts]
 	Visualize the data using ```umap``` or ```t-SNE```. This 
 	arugment will NOT be prompted.
 --species SPECIES (default: "")
-	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.	
+	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.
 --tissue TISSUE (default: "")
 	Tissue type of the sample (ex. brain, heart, etc.). Will 
 	be used to retrieve marker gene data if file not provided 
@@ -637,5 +633,3 @@ python3 annotate.py --adata=FILEPATH [-disable_interrupts]
 	M number of bins to use to divide the gene ranking in 
 	annotation scoring
 ```
-
-
