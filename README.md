@@ -5,8 +5,7 @@
 R# Table of contents
 
 - [**Software used**](#software-used)
-- [**General Pipeline**]
-- [**Cellranger**]
+- [**Cellranger**](cellranger)
   - **1. Cellranger - make reference transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
@@ -14,29 +13,28 @@ R# Table of contents
     - [**1c. Test with Scripts**](#1d-test-with-scripts)
   - **2. Cellranger Counts Setup**
     - [**2a. Datasets**](#2a-datasets)
-    - [**2b. Cellranger count**](#2b-cellranger-count)
+    - [**2b. Cellranger counts**](#2b-cellranger-count)
   - [**3. Cellranger Output**](#3-build-star-reference)
-- [**scrnaseq.py**] 
-  - [**1. Quality Control in Scanpy**](#1-quality-control-in-scanpy)
-    - [**1a. User analysis plots**](#1a-user-analysis-tools)
-      - [**5ai Highest expressed genes overview**](#5ai-Highest-expressed-genes)
-      - [**1aii Gene distribution**](#1aii-gene-distribution)
-      - [**1aiii Cell distribution**](#1aiii-cell-distribution)
-    - [**1b Filtering**](#1b-Filtering)
-    - [**1c Batch Effect Correction**](#1c-batch-effect-correction)
-  - [**2 Remove Highly Variable Genes**](#2-remove-highly-variable-genes)
-    - [**2a Preparation**](#2a-normalization-and-logarithmization)
-    - [**2b Remove Highly Variable Genes**](#2b-remove-highly-variable-genes)
-  - [**3 Clustering**](#3-clustering)
-    - [**3a K-Nearest Neighbors**](#3a-knn)
-    - [**3b Leiden Clustering](#3b-leiden-clustering)
-  - [**4 Visualization**](#4-visualization)
-    - [**4a UMAP**](#4a-umap)
-    - [**4b Cluster Overview](#4b-clusters)
-      - [**4bi
-    - [**5c Gene Expression](#4c-gene-expression)
-      - [**5ci
-
+- [**scRCT and annotate Python Script**](scRCT-and-annotate-Python-Script) 
+  - [**1. Setup and Introduction**](#1-setup-and-introduction)
+    - [**1a. Packages**](#1a-packages)
+    - [**1b. Prompts**](#1b-prompt)
+    - [**1c. Arguments**](#1c-arguments)
+    - [**1d. Marker Gene File Format](#1d-marker-gene-file-format)
+    - [**1e. Directory Structure](#1e-directory-structure)
+  - [**2. Quality control and User analysis tools**](#2-quality-control-and-user-analysis-tools)
+    - [**2a. Highest expressed genes**](#2a-highest-expressed-genes)
+    - [**2b. Gene and Cell distribution**](#2b-gene-and-cell-distribution)
+    - [**2c. Remove Highly Variable Genes**](#2c-remove-highly-variable-genes)
+  - [**3. Clustering**](#3-clustering)
+    - [**3a. Clustering Revisted: Resolution](#3a-clustering-revistied-resolution)
+  - [**4. Gene Expression**](#4-gene-expression)
+    - [**4a. Additional Visualization**](#4a-additional-visualization)
+  - [**5. Data Annotation and ```annotate.py```**](#5-data-annotation)
+    - [**5a. Visualization](#5a-visualization)
+      - [**5ai Annotation Revisited: Parameter tuning**](#5ai-annotation-revisted-parameter-tuning)
+    - [**5b. Export annotation**](#6b-export-annotation)
+    - [**5c. Arguments**](#6c-arguments)
 
 ---
 
@@ -276,9 +274,9 @@ cellranger count --id --transcriptome --fastqs --sample --expect-cells --localco
 
 Explanation of each paramater is below:
 
-* `--id` – A string id of the job. This will be the name of the output folder.
-* `--transcriptome` – path to the reference transcriptome directory
-* `--fastqs` – path to fastqs directory
+* `--id` – A string id of the job. This will be the name of the output folder. Recommended to be placed under ```01-CellRanger/CellRanger_Output```.
+* `--transcriptome` – path to the reference transcriptome directory. Recommended to be located under ```01-CellRanger/Reference_Annotation```.
+* `--fastqs` – path to fastqs directory. Recommended to be located under ```00-Raw_Data/Fastq```.
 * `--sample` – name of samples to run. If multiple samples, can have multiple inputs comma-seperated. ex. SRR13040579, SRR13040580 etc.
 * `--expected-cells` – an optimal parameter if number of cells is known beforehand. Default is 3000 cells.
 * `--localcores` – number of cores to run the job
@@ -314,7 +312,7 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ---
 
-# SCRNASEQ Python Script
+# scRCT and annotate Python Script
 
 ---
 
@@ -322,19 +320,19 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ---
 
-## 1a Packages
+### 1a Packages
 
 This program requires the following packages: ```NumPy```, ```PANDAS```, ```ScanPy```, ```seaborn```, ```matplotlib```, ```HarmonyPy```, ```scikit-misc```, and ```leidenalg```. However, if these packages are not install, the program will automatically install them. If the packages still fail to load, try running the program again or install the packages on your own.
 
 ---
 
-## 1b Prompts
+### 1b Prompts
 
 This program will be an interactive experience and will provide the user opportunities to view the data and pass a parameter at each step of the process. Users can also pass the ```-disable_interrupts``` argument to disable this feature and run the program without any interruptions. 
 
 IMPORTANT NOTE: If the program is in an environment where it cannot pop-up a new window to display the plots, remember that plot images are immediately saved in the ```Images``` folder and can be viewed while running the program.
 
-## 1c Arguments
+### 1c Arguments
 
 The majority of these arguments will be prompted during a program run with interruptions making most command arguments optional. The only required argument is ```--filepath``` for the directory location of the cellranger output. The default marker gene file only contains Human and Mouse genes, and would require a file to be provided for other species.
 
@@ -385,7 +383,7 @@ python3 scRCT.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
 
 ---
 
-## 1d Marker Gene File Format
+### 1d Marker Gene File Format
 
 Only Human and Mouse marker genes are available to the program. Annotating other species would require your own marker gene file. Please place you files under ```03-ScoreCT/Marker_genes```. If a file is not provided, the program will not be able to annotate the data!
 
@@ -398,7 +396,7 @@ gene,     , gene
 etc.,      ,
 ```
 
-![Marker gene file viewed in Microsoft Excel](https://drive.google.com/file/d/16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_/view?usp=sharing)
+![Marker gene file viewed in Microsoft Excel](https://drive.google.com/file/d/16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
 
 The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell as less genes that the maximum number of columns, simply leave those entries blank or enter 'NA'.
 
@@ -406,35 +404,39 @@ Because it is more common to find files that follow this format but tranposed (i
 
 ---
 
-## 1e Directory Structure
+### 1e Directory Structure
 
 > 00-Raw_Data
 >
-> ├── Fastq
+> ├── [Fastq](#2b-cellranger-count)
 >
 > ├── FastQC_Reports
 >
 > 01-CellRanger
 >
-> ├── CellRanger_Output
+> ├── [CellRanger_Output](#2b-cellranger-count)
 >
-> ├── Reference_Annotation
+> ├── [Reference_Annotation](#2b-cellranger-count)
 >
 > 02-Scanpy
 >
-> ├── Adata
+> ├── [Adata](#5-data-annotation)
 >
-> ├── Images
+> ├── [Images](#2-quality-control-and-user-analysis-tools)
 >
 > ├── VV_logs
 >
 > 03-ScoreCT
 >
-> ├── Annotation_Exports
+> ├── [Annotation_Exports](#6b-export-annotation)
 >
-> ├── Marker_genes
+> ├── [Marker_genes](#1d-marker-gene-file-format)
 >
-> ├── tSNE_UMAP
+> ├── [tSNE_UMAP](#5a-visualization)
+
+The directory structure is listed above and can be quickly created using ```scRNAseq_mkdir.sh```. Each hyperlink wlll lead to the section where that directory will be used. 
+
+For each run of the program, a new ```run#_*species*_*tissue*``` directory will be created in the ```Images``` and ```tSNE_UMAP``` folder to organize each run's image output. For ```annotate.py```, it will be named ```annotate_run#_*species*_*tissue*``` instead. The name is based on the number of runs of the program, and the species and tissue inputed. Other outputs will be named similarly.
 
 ---
 
@@ -453,19 +455,19 @@ Default values are provided should the user not provide an input and leave the i
 
 ---
 
-## 2a Highest expressed genes
+### 2a Highest expressed genes
 
 The first graph that will pop up will show boxplox distributions of the highest expressed genes. These plots will be saved as a ```.png``` image under the ```02-Scanpy/Images``` directory. It is recommended that the user note the amount of outliers and the genes listed.
 
-![Highly expressed genes](https://drive.google.com/file/d/1kMpqFg5JxWIHqUVD7vokHRU3O5hN07pu/view?usp=sharing)
+![Highly expressed genes](https://drive.google.com/file/d/1kMpqFg5JxWIHqUVD7vokHRU3O5hN07pu)
 
 ---
 
-## 2b Gene and Cell distribution
+### 2b Gene and Cell distribution
 
 The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
-![Gene distribution](https://drive.google.com/file/d/1lhVy1kr__g1OjyGsm0fyjFR4LnbZdkvQ/view?usp=sharing)
+![Gene distribution](https://drive.google.com/file/d/1lhVy1kr__g1OjyGsm0fyjFR4LnbZdkvQ)
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
@@ -473,15 +475,11 @@ Input min_genes threshold or leave blank to use default settings:
 
 After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed. This would be repeated for the cell distribution.
 
-Output: 
-
-- Filtered adata
-
 ---
 
-## 3 Remove Highly Variable Genes
+### 2c Remove Highly Variable Genes
 
-The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No arguments are required for this step and the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
+The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
 
 <details>
   <summary>Explanation of Algorithm</summary>
@@ -500,11 +498,12 @@ The program will then remove genes that are highly variable in the data to reduc
 
 Output:
 
+- Filtered adata
 - Highly variable genes removed in adata
 
 ---
 
-## 4 Clustering
+## 3 Clustering
 
 Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z). 
 
@@ -512,7 +511,7 @@ The Leiden algorithm uses the distances calculated by the KNN algorithm to perfo
 
 After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graphs to move on with the program.
 
-![Cluster graph](https://drive.google.com/file/d/1nDhSGlVEEOrnaRvnd5zyYjiirhvJuDca/view?usp=sharing)
+![Cluster graph](https://drive.google.com/file/d/1nDhSGlVEEOrnaRvnd5zyYjiirhvJuDca)
 
 Output:
 
@@ -520,7 +519,7 @@ Output:
 
 ---
 
-## 4a Clustering Revisited: Resolution
+### 3a Clustering Revisited: Resolution
 
 At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution. 
 
@@ -530,15 +529,15 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 ---
 
-## 5 Gene Expression Visualization
+## 4 Gene Expression
 
 The program will display another plot to view gene expression. This plot will be saved under ```02-Scanpy/images```. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will sample the first 2 genes in the data.
 
-![Gene Expression](https://drive.google.com/file/d/1BB5c9EbUpDHJA2eJ2ri6Voi4W9Kr7X5B/view?usp=sharing)
+![Gene Expression](https://drive.google.com/file/d/1BB5c9EbUpDHJA2eJ2ri6Voi4W9Kr7X5B)
 
 ---
 
-## 5b Additional Visualization
+### 4a Additional Visualization
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: Gm1992, Rp1
@@ -566,21 +565,21 @@ Output:
 
 ---
 
-## 6 Data Annotation
+## 5 Data Annotation
 
-The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ```run#_adata.h5ad``` which can be used for ```annotate.py```. The program will annotate the data using the marker gene file and the cluster results. More about the marker gene file can be read [here](MARKER GENE FILE HEADER)
+The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ```run#_adata.h5ad``` which can be used for ```annotate.py```. The program will annotate the data using the marker gene file and the cluster results. More about the marker gene file can be read [here](#1d-marker-gene-file-format).
 
 ---
 
-## 6a Visualization
+### 5a Visualization
 
 Once the program finishes annotating the data, the program will display a final graph of the results to view. The plot will be saved as a ```.png``` image under ```03-ScoreCT/tSNE_UMAP```. Close this window to continue the program.
 
-![Annotated data](https://drive.google.com/file/d/19oTGbrAJVibfyxJsisK7PtZ6xY99uR1a/view?usp=sharing)
+![Annotated data](https://drive.google.com/file/d/19oTGbrAJVibfyxJsisK7PtZ6xY99uR1a)
 
 ---
 
-## 6ai Anntation Revisited: Parameter tuning
+### 5ai Annotation Revisited: Parameter tuning
 
 At this stage, the user would be able to see the results of the annotation and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m. 
 
@@ -594,9 +593,9 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 ---
 
-## 6b Export annotation
+### 5b Export annotation
 
-![Annotation output excel file](https://drive.google.com/file/d/19uVckwG7VSTjeI6OY7z817G5TXKhak4r/view?usp=sharing)
+![Annotation output excel file](https://drive.google.com/file/d/19uVckwG7VSTjeI6OY7z817G5TXKhak4r)
 
 The last step program will do is export an .xlsx file with the annotated data. The file will be exorted to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns: 
 
@@ -607,7 +606,7 @@ The last step program will do is export an .xlsx file with the annotated data. T
 
 ---
 
-## 6c Arguments
+### 5c Arguments
 
 ```annotate.py``` will run exactly the same as ```scRCT.py```'s annotation step. This can be used to re-annotate the data without having to go through the filtered process again. The only requirement is the ```adata.h5ad``` file that is exported by scRCT.py once filterig had finished. This is the post-filtered version of the counted data and is saved under ```02-Scanpy/Adata```. The arguments for the program match ```scRCT.py```, with the exception of ```--adata```.
 
