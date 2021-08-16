@@ -396,7 +396,7 @@ gene,     , gene
 etc.,      ,
 ```
 
-![Marker gene file viewed in Microsoft Excel(https://drive.google.com/file/d/16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
+![Marker gene file viewed in Microsoft Excel(https://drive.google.com/uc?export=view&id=16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
 
 The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell as less genes that the maximum number of columns, simply leave those entries blank or enter 'NA'.
 
@@ -459,7 +459,7 @@ Default values are provided should the user not provide an input and leave the i
 
 The first graph that will pop up will show boxplox distributions of the highest expressed genes. These plots will be saved as a ```.png``` image under the ```02-Scanpy/Images``` directory. It is recommended that the user note the amount of outliers and the genes listed.
 
-![Highly expressed genes](https://drive.google.com/file/d/1kMpqFg5JxWIHqUVD7vokHRU3O5hN07pu)
+![Highly expressed genes](https://drive.google.com/uc?export=view&id=1kMpqFg5JxWIHqUVD7vokHRU3O5hN07pu)
 
 ---
 
@@ -467,7 +467,7 @@ The first graph that will pop up will show boxplox distributions of the highest 
 
 The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
-![Gene distribution](https://drive.google.com/file/d/1lhVy1kr__g1OjyGsm0fyjFR4LnbZdkvQ)
+![Gene distribution](https://drive.google.com/uc?export=view&id=1lhVy1kr__g1OjyGsm0fyjFR4LnbZdkvQ)
 
 ```
 Input min_genes threshold or leave blank to use default settings: 
@@ -511,7 +511,7 @@ The Leiden algorithm uses the distances calculated by the KNN algorithm to perfo
 
 After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graphs to move on with the program.
 
-![Cluster graph](https://drive.google.com/file/d/1nDhSGlVEEOrnaRvnd5zyYjiirhvJuDca)
+![Cluster graph](https://drive.google.com/uc?export=view&id=1nDhSGlVEEOrnaRvnd5zyYjiirhvJuDca)
 
 Output:
 
@@ -533,7 +533,7 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 The program will display another plot to view gene expression. This plot will be saved under ```02-Scanpy/images```. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will sample the first 2 genes in the data.
 
-![Gene Expression](https://drive.google.com/file/d/1BB5c9EbUpDHJA2eJ2ri6Voi4W9Kr7X5B)
+![Gene Expression](https://drive.google.com/uc?export=view&id=1BB5c9EbUpDHJA2eJ2ri6Voi4W9Kr7X5B)
 
 ---
 
@@ -575,7 +575,7 @@ The following steps could be repeated using ```annotate.py``` should the user wa
 
 Once the program finishes annotating the data, the program will display a final graph of the results to view. The plot will be saved as a ```.png``` image under ```03-ScoreCT/tSNE_UMAP```. Close this window to continue the program.
 
-![Annotated data](https://drive.google.com/file/d/19oTGbrAJVibfyxJsisK7PtZ6xY99uR1a)
+![Annotated data](https://drive.google.com/uc?export=view&id=19oTGbrAJVibfyxJsisK7PtZ6xY99uR1a)
 
 ---
 
@@ -595,7 +595,7 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 ### 5b Export annotation
 
-![Annotation output excel file](https://drive.google.com/file/d/19uVckwG7VSTjeI6OY7z817G5TXKhak4r)
+![Annotation output excel file](https://drive.google.com/uc?export=view&id=19uVckwG7VSTjeI6OY7z817G5TXKhak4r)
 
 The last step program will do is export an .xlsx file with the annotated data. The file will be exorted to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns: 
 
