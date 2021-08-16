@@ -13,28 +13,28 @@ R# Table of contents
     - [**1c. Test with Scripts**](#1d-test-with-scripts)
   - **2. Cellranger Counts Setup**
     - [**2a. Datasets**](#2a-datasets)
-    - [**2b. Cellranger counts**](#2b-cellranger-count)
+    - [**2b. Cellranger counts**](#2b-cellranger-counts)
   - [**3. Cellranger Output**](#3-build-star-reference)
-- [**scRCT and annotate Python Script**](scRCT-and-annotate-Python-Script) 
+- [**scRCT and annotate Python Script**](#scRCT-and-annotate-Python-Script) 
   - [**1. Setup and Introduction**](#1-setup-and-introduction)
     - [**1a. Packages**](#1a-packages)
-    - [**1b. Prompts**](#1b-prompt)
+    - [**1b. Prompts**](#1b-prompts)
     - [**1c. Arguments**](#1c-arguments)
-    - [**1d. Marker Gene File Format](#1d-marker-gene-file-format)
-    - [**1e. Directory Structure](#1e-directory-structure)
+    - [**1d. Marker Gene File Format**](#1d-marker-gene-file-format)
+    - [**1e. Directory Structure**](#1e-directory-structure)
   - [**2. Quality control and User analysis tools**](#2-quality-control-and-user-analysis-tools)
     - [**2a. Highest expressed genes**](#2a-highest-expressed-genes)
     - [**2b. Gene and Cell distribution**](#2b-gene-and-cell-distribution)
     - [**2c. Remove Highly Variable Genes**](#2c-remove-highly-variable-genes)
   - [**3. Clustering**](#3-clustering)
-    - [**3a. Clustering Revisted: Resolution](#3a-clustering-revistied-resolution)
+    - [**3a. Clustering Revisted: Resolution**](#3a-clustering-revisited-resolution)
   - [**4. Gene Expression**](#4-gene-expression)
     - [**4a. Additional Visualization**](#4a-additional-visualization)
   - [**5. Data Annotation and ```annotate.py```**](#5-data-annotation)
-    - [**5a. Visualization](#5a-visualization)
-      - [**5ai Annotation Revisited: Parameter tuning**](#5ai-annotation-revisted-parameter-tuning)
-    - [**5b. Export annotation**](#6b-export-annotation)
-    - [**5c. Arguments**](#6c-arguments)
+    - [**5a. Visualization**](#5a-visualization)
+      - [**5ai Annotation Revisited: Parameter tuning**](#5ai-annotation-revisited-parameter-tuning)
+    - [**5b. Export annotation**](#5b-export-annotation)
+    - [**5c. Arguments**](#5c-arguments)
 
 ---
 
@@ -396,7 +396,7 @@ gene,     , gene
 etc.,      ,
 ```
 
-![Marker gene file viewed in Microsoft Excel](https://drive.google.com/file/d/16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
+![Marker gene file viewed in Microsoft Excel(https://drive.google.com/file/d/16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
 
 The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell as less genes that the maximum number of columns, simply leave those entries blank or enter 'NA'.
 
@@ -408,15 +408,15 @@ Because it is more common to find files that follow this format but tranposed (i
 
 > 00-Raw_Data
 >
-> ├── [Fastq](#2b-cellranger-count)
+> ├── [Fastq](#2b-cellranger-counts)
 >
 > ├── FastQC_Reports
 >
 > 01-CellRanger
 >
-> ├── [CellRanger_Output](#2b-cellranger-count)
+> ├── [CellRanger_Output](#2b-cellranger-counts)
 >
-> ├── [Reference_Annotation](#2b-cellranger-count)
+> ├── [Reference_Annotation](#2b-cellranger-counts)
 >
 > 02-Scanpy
 >
@@ -428,7 +428,7 @@ Because it is more common to find files that follow this format but tranposed (i
 >
 > 03-ScoreCT
 >
-> ├── [Annotation_Exports](#6b-export-annotation)
+> ├── [Annotation_Exports](#5b-export-annotation)
 >
 > ├── [Marker_genes](#1d-marker-gene-file-format)
 >
