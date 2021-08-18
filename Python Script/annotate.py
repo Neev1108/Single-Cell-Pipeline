@@ -73,6 +73,15 @@ image_directory = "../../02-Scanpy/Images/"
 marker_dir = "../../03-ScoreCT/Marker_genes/"
 annotation_dir = "../../03-ScoreCT/Annotation_Exports/"
 final_plot_dir = "../../03-ScoreCT/tSNE_UMAP/"
+adata_dir = "../../02-Scanpy/Adata/"
+
+#V&V existance of directories
+assert os.path.exists(log_dir), log_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
+assert os.path.exists(image_directory), image_directory+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
+assert os.path.exists(marker_dir), marker_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
+assert os.path.exists(annotation_dir), annotation_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
+assert os.path.exists(final_plot_dir), final_plot_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
+assert os.path.exists(adata_dir), adata_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current direcotry."
 
 run_num = 1
 while os.path.exists(log_dir+"annotate_run"+str(run_num)+".txt") or os.path.exists(image_directory+"annotate_run"+str(run_num)+".png"):
