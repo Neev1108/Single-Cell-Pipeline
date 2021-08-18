@@ -447,8 +447,13 @@ try:
     adata.obs.to_excel(annotation_dir+ann_output_name)
     VV_file_save(annotation_dir, ann_output_name, "Exported \"" + ann_output_name + "\"")
 
+    #Export adata for future uses
+    adata.write(adata_dir + "annotate_run" + str(run_num) + "_" + output_name + "_adata_annotated.h5ad")
+    VV_file_save(adata_dir, "annotate_run" + str(run_num) + "_" + output_name + "_adata_annotated.h5ad", "Successfully exported adata_annotated")
+
     #Message about other python script
     print("*Annotation exported to \'"+output_name+'\'*')
+    print("*Exported data to \'annotate_run" + str(run_num) + "_adata_annotated.h5ad\'*")
 
     # Log final parameters if on interrupt run
     if interrupt:

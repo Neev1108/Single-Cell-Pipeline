@@ -1,8 +1,8 @@
 # Genelab Single-Cell RNA Sequencing Pipeline
 
-> **This repository holds the slurm scripts for each cellranger command, sample Jupyter Notebooks for each Genelab experiment, and a final python script to automate the spaceflight pipeline workflow for NASA's GeneLab. The final python script will optimized for spaceflight experiments, like keeping mitochondrial reads, optimizing QC metrics for spaceflight experiments, and indepth visualization for the user to change these inputs if need be.**
+> **This repository holds the slurm scripts for each cellranger command, sample Jupyter Notebooks for each Genelab experiment, and a final python script to automate the spaceflight pipeline workflow for NASA's GeneLab. The final python script will optimized for spaceflight experiments, like keeping mitochondrial reads, optimizing QC metrics for spaceflight experiments, and in-depth visualization for the user to change these inputs if need be.**
 
-R# Table of contents
+# Table of contents
 
 - [**Software used**](#software-used)
 - [**Cellranger**](#Cellranger)
@@ -45,12 +45,13 @@ R# Table of contents
 | Cellranger | 6.0.2 | https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger |
 | SRA Toolkit | 2.11.0 | https://github.com/ncbi/sra-tools |
 | Scanpy | 1.8 | https://scanpy.readthedocs.io/en/stable/ |
+| ScoreCT | 1.0 | https://github.com/LucasESBS/scoreCT |
 
 # Cellranger
 
 ## 1. Cellranger Reference Transcriptome
 
-To count a dataset with cellranger, a reference transcriptome, and the fastq files are required. The first step of this pipeline involves making a reference transcriptome, if not using cellranger's given transcriptomes (which are currently only human and mice transcriptomes).
+To count a dataset with cellranger, a reference transcriptome and the fastq files are required. The first step of this pipeline involves making a reference transcriptome, if not using cellranger's given transcriptomes (which are currently only human and mice transcriptomes).
 
 For a simple example, we will be using a plant dataset, Arabidopsis Thaliana to run analysis on.
 
@@ -70,15 +71,12 @@ Before running the mkref method, we can also use cellranger's mkgtf method to fi
 
 ```
 cellranger mkgtf input.gtf output.gtf  --attribute=gene_biotype:protein_coding
-
 ```
 
 This command only has one parameter:
 
 * `--attribute` – Use this command multiple times to filter our genes. An example is below.
 
-> **
->
 > --attribute=gene_biotype:protein_coding
 >
 > --attribute=gene_biotype:lincRNA
@@ -112,8 +110,6 @@ This command only has one parameter:
 > --attribute=gene_biotype:TR_J_pseudogene
 >
 > --attribute=gene_biotype:TR_C_gene
->
-> **
 
 Output:
 
@@ -127,7 +123,6 @@ Cellranger has a command to make transcriptomes called:
 
 ```
 cellranger mkref --genome --fasta --genes.
-
 ```
 
 Explanation of each parameter is below:
@@ -156,7 +151,6 @@ For filtering genes, run:
 
 ```
 sbatch filter_genes_mkgtf.sh  Arabidopsis_thaliana.TAIR10.51.gtf Arabidopsis_filtered.gtf
-
 ```
 
 The slurm filter_genes_mkgtf.sh script already has some filters. Edit for which filters to continue with.
@@ -198,7 +192,7 @@ compatible: SRR6334436_S1_L001_R1_001.fastq
 
 If downloading a dataset from NCBI using SRA, then please first check if the data access has a BAM file. If it does, you can use cellrangers bamtofastq function. Most datasets do not, so we will not discuss this function.
 
-A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions::
+A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions:
 
 > SRR IDs are run accessions, and the fastq files will normally have 2 fastq files, a read1 and a read 2.
 >
@@ -224,8 +218,6 @@ These will need to be renamed as shown above.
 The final file structure for the fastq files will look like below (this is for Arabidopsis):
 
 > Arabidopsis_dataset
->
-> .
 >
 > ├── SRR13040579_S1_L001_R1_001.fastq.gz
 >
@@ -267,7 +259,6 @@ Cellranger counts work as the following:
 
 ```
 cellranger count --id --transcriptome --fastqs --sample --expect-cells --localcores --localmem
-
 ```
 
 Explanation of each paramater is below:
@@ -303,10 +294,13 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ### Notes
 
-> **We only use one sample from the 8 we have on Arabidopsis. To use all 8, put all sample names comma-seperated in the sample parameter.
+> We only use one sample from the 8 we have on Arabidopsis. To use all 8, put all sample names comma-seperated in the sample parameter.
+>
 > In our above example, the slurm script will set a default memory of 40gb and then use 32 gb in the cellranger command.
+>
 > For the slurm script, you can change it to sbatch --mem=70g cellranger_script.sh... for the slurm memory, but the cellranger memory must be lower. Therefore using 64 will work if using 70g in slurm memory.
-> Do this if you might need more memory for the job. **
+>
+> Do this if you might need more memory for the job.
 
 ---
 
@@ -320,7 +314,7 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 
 ### 1a Packages
 
-This program requires the following packages: ```NumPy```, ```PANDAS```, ```ScanPy```, ```seaborn```, ```matplotlib```, ```HarmonyPy```, ```scikit-misc```, and ```leidenalg```. However, if these packages are not install, the program will automatically install them. If the packages still fail to load, try running the program again or install the packages on your own.
+This program requires the following packages: ```NumPy```, ```PANDAS```, ```ScanPy```, ```seaborn```, ```matplotlib```, ```HarmonyPy```, ```scikit-misc```, ```leidenalg```, ```openpyxl```, and ```scorect_api```. However, if these packages are not installed, the program will automatically install them. If the packages still fail to load, try running the program again or install the packages on your own. NOTE: Python3 is required.
 
 ---
 
@@ -328,24 +322,26 @@ This program requires the following packages: ```NumPy```, ```PANDAS```, ```Scan
 
 This program will be an interactive experience and will provide the user opportunities to view the data and pass a parameter at each step of the process. Users can also pass the ```-disable_interrupts``` argument to disable this feature and run the program without any interruptions.
 
-IMPORTANT NOTE: If the program is in an environment where it cannot pop-up a new window to display the plots, remember that plot images are immediately saved in the ```Images``` folder and can be viewed while running the program.
+IMPORTANT NOTE: If the program is in an environment where it cannot pop-up a new window to display the plots, remember that plot images are immediately saved in the ```Images``` folder and can be viewed while running the program. (ex. running on a cluster)
 
 ### 1c Arguments
 
-The majority of these arguments will be prompted during a program run with interruptions making most command arguments optional. The only required argument is ```--filepath``` for the directory location of the cellranger output. The default marker gene file only contains Human and Mouse genes, and would require a file to be provided for other species.
+The majority of these arguments will be prompted during a program run with interruptions making most command arguments optional. The only required argument is ```--filepath``` for the directory location of the cellranger output. The default marker gene file uses CellMarker which only contains Human and Mouse genes. This would require a file to be provided for other species. Optional arguments are put in brackets ([]).
 
 ```
-python3 scRCT.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
-[--markers MARKER_FILE] [--plot PLOT] [--min_cells THRESHOLD] 
+python3 scRCT.py --filepath=CELLRANGER_OUTPUT [--markers MARKER_FILE]  
+[-disable_interrupts] [--plot PLOT] [--min_cells THRESHOLD] 
 [--min_genes THRESHOLD] [--neighbors K] [--res CLUSTER_RESOLUTION]
 [--genes GENES] [--species SPECIES] [--tissue TISSUE]
 [--K TOP_K] [--bins M]
 
 --filepath CELLRANGER_OUTPUT (REQUIRED)
-	File path of the cellranger output folder.
+	File path of the cellranger output folder. The output must 
+	contain ```barcodes.tsv.gz```, ```features.tsv.gz```, and 
+	```matrix.mtx.gz```. These must be in ```gz``` format.
 -disable_interrupts
 	Disable program interruptions for user analysis and 	argument prompt.
---markers MARKER_FILE (default: Human and Mouse tissues)
+--markers MARKER_FILE (default: CellMarker)
 	Provide a marker gene file to annotate the data. Format 
 	described below.
 --plot PLOT (default: umap)
@@ -357,24 +353,36 @@ python3 scRCT.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
 --min_genes THRESHOLD (default: 1st precentile)
 	The minimum number of genes a cell has to express to pass 
 	the filter.
---neighbors K (default: sqrt(n))
+--neighbors K (default: 15)
 	The number of neighbors to "vote" for a cell in the KNN 
 	algorithm. This argument will NOT be prompted.
---res CLUSTER_RESOLUTION (default: 1.0)
+--res CLUSTER_RESOLUTION (default: 0.5)
 	A decimal number determining the amount of clusters. The 
 	higher the number, the more clusters in the results.
---genes GENES
+--genes GENES (default: [])
 	A list of comma (,) separated genes to visualize gene 
-	expression once the data has been filtered.
+	expression once the data has been filtered. If not provided, 
+	the top 2 genes will be displayed. 
 --species SPECIES (default: "")
+<<<<<<< HEAD
+	Species of the sample (ex. human, mouse). Will be used in 
+	naming the output files and directories. Will be used to 
+	retrieve marker gene data if file not provided (Human and 
+	Mouse only). Users will be prompted for species if marker 
+	gene file is not provided even on ```-disable_interrupts```.
+=======
 	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 --tissue TISSUE (default: "")
-	Tissue type of the sample (ex. brain, heart, etc.). Will 
+	Tissue type of the sample (ex. brain, heart, etc.). Will be 
+	used in naming the output files and directories. Will 
 	be used to retrieve marker gene data if file not provided 
-	(Human and Mouse only).
---K TOP_K (default: 450)
+	(Human and Mouse only). Users will be prompted for tissue 
+	if marker gene file is not provided even on 
+	```-disable_interrupts```.
+--K TOP_K (default: 300)
 	Top K genes to include in annotation scoring.
---bins M (default: 20)
+--bins M (default: 15)
 	M number of bins to use to divide the gene ranking in 
 	annotation scoring
 ```
@@ -383,7 +391,7 @@ python3 scRCT.py --filepath=CELLRANGER_OUTPUT [-disable_interrupts]
 
 ### 1d Marker Gene File Format
 
-Only Human and Mouse marker genes are available to the program. Annotating other species would require your own marker gene file. Please place you files under ```03-ScoreCT/Marker_genes```. If a file is not provided, the program will not be able to annotate the data!
+Only Human and Mouse marker genes are available to the program. Annotating other species would require your own marker gene file. Please place your files under ```03-ScoreCT/Marker_genes```. If a file is not provided, the program will not be able to annotate the data!
 
 ```
 Marker gene file format example (csv):
@@ -394,11 +402,11 @@ gene,     , gene
 etc.,      ,
 ```
 
-![Marker gene file viewed in Microsoft Excel(https://drive.google.com/uc?export=view&id=16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
+![Marker gene file viewed in Microsoft Excel](https://drive.google.com/uc?export=view&id=16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
 
 The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell as less genes that the maximum number of columns, simply leave those entries blank or enter 'NA'.
 
-Because it is more common to find files that follow this format but tranposed (i.e. cell names in the first *column* with genes list in the following *columns*), the program will automatically tranpose the data and load the data, along with saving it as ```*filename*_corrected.csv```.
+**Because it is more common to find files that follow this format but tranposed (i.e. cell names in the first *column* with genes list in the following *columns*), the program will automatically tranpose the data and load the data, along with saving it as ```*filename*_corrected.csv```.**
 
 ---
 
@@ -434,7 +442,7 @@ Because it is more common to find files that follow this format but tranposed (i
 
 The directory structure is listed above and can be quickly created using ```scRNAseq_mkdir.sh```. Each hyperlink wlll lead to the section where that directory will be used.
 
-For each run of the program, a new ```run#_*species*_*tissue*``` directory will be created in the ```Images``` and ```tSNE_UMAP``` folder to organize each run's image output. For ```annotate.py```, it will be named ```annotate_run#_*species*_*tissue*``` instead. The name is based on the number of runs of the program, and the species and tissue inputed. Other outputs will be named similarly.
+For each run of the program, a new ```run#_*species*_*tissue*``` directory will be created in the ```Images``` and ```tSNE_UMAP``` folder to organize each run's image output. For ```annotate.py```, it will be named ```annotate_run#_*species*_*tissue*``` instead. The name is based on the number of runs of the program, the species, and tissue inputed. Other outputs will be named similarly.
 
 ---
 
@@ -449,13 +457,17 @@ Input min_genes threshold or leave blank to use default settings:
 Input min_cells threshold or leave blank to use 1:
 ```
 
+<<<<<<< HEAD
+Default values are provided should the user leave the input blank. 
+=======
 Default values are provided should the user not provide an input and leave the input blank.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 ---
 
 ### 2a Highest expressed genes
 
-The first graph that will pop up will show boxplox distributions of the highest expressed genes. These plots will be saved as a ```.png``` image under the ```02-Scanpy/Images``` directory. It is recommended that the user note the amount of outliers and the genes listed.
+The first graph that will pop up will show boxplot distributions of the highest expressed genes. These plots will be saved as a ```.png``` image under the ```02-Scanpy/Images``` directory. It is recommended that the user note the amount of outliers and the genes listed.
 
 ![Highly expressed genes](https://drive.google.com/uc?export=view&id=1kMpqFg5JxWIHqUVD7vokHRU3O5hN07pu)
 
@@ -463,7 +475,7 @@ The first graph that will pop up will show boxplox distributions of the highest 
 
 ### 2b Gene and Cell distribution
 
-The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x' value as the minimum number of genes required to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
+The distribution of the number of genes expressed in cells will be shown. Users are encouraged to use this graph to determine an 'x'--the minimum number of genes--a cell must express to pass the filter. A red line is displayed on the graph that follows the cursor to help with determining this value.
 
 ![Gene distribution](https://drive.google.com/uc?export=view&id=1lhVy1kr__g1OjyGsm0fyjFR4LnbZdkvQ)
 
@@ -471,13 +483,21 @@ The distribution of the number of genes expressed in cells will be shown. Users 
 Input min_genes threshold or leave blank to use default settings: 
 ```
 
-After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed. This would be repeated for the cell distribution.
+After closing the window for the graph, the user would then be prompted to enter the value for the minimum number of genes threshold. Leaving the prompt blank would use the default value or the argument value if it was passed. 
+
+This would be repeated for the cell distribution, where 'x' is the minimum number of cells a gene needs to be expressed in so that gene can pass the filter.
+
+![Cell distribution](https://drive.google.com/uc?export=view&id=1NQjn4OrRvzJRC5UBmOuIYB49q1VzFrnN)
 
 ---
 
 ### 2c Remove Highly Variable Genes
 
+<<<<<<< HEAD
+The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the likelihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
+=======
 The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 <details>
   <summary>Explanation of Algorithm</summary>
@@ -486,9 +506,20 @@ The program will then remove genes that are highly variable in the data to reduc
 sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
 ```
 
+<<<<<<< HEAD
+  ```
+  sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
+  ```
+
+
+  This program uses R's Seurat's algorithm.
+
+  Each gene is put into 20 'bins' based on their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+=======
 This program use's R's Seurat's algorithm.
 
 Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 </details>
 
@@ -501,33 +532,47 @@ Output:
 
 ## 3 Clustering
 
+<<<<<<< HEAD
+Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and their differences [here](https://www.nature.com/articles/s41598-019-41695-z). 
+
+The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k' can be adjusted using ```--neighbors``` (this parameter will not be prompt during a normal program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. 
+=======
 Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z).
 
 The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k can be ajusted using ```--neighbors``` (this parameter will not be prompt during a program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
-After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graphs to move on with the program.
+After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graph to move on with the program.
 
 ![Cluster graph](https://drive.google.com/uc?export=view&id=1nDhSGlVEEOrnaRvnd5zyYjiirhvJuDca)
 
 Output:
 
-- Custer classification values for each cell in adata
+- Cluster classification values for each cell in adata
 
 ---
 
 ### 3a Clustering Revisited: Resolution
 
+<<<<<<< HEAD
+At this stage, the user would be able to see the results of the clustering, and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution. 
+=======
 At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
-Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
+Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the results. The default setting for cluster resolution is ```0.5```.
 
-The user can repeatedly adjust and view the results of the cluster until they are satisfied. Each visualization will be saved under ```02-Scanpy/Images``` To continue with the program, simply give a blank input.
+The user can repeatedly adjust and view the results of the cluster until they are satisfied. Each visualization will be saved under ```02-Scanpy/Images```. To continue with the program, simply give a blank input.
+
+Output:
+
+- Clustered data
 
 ---
 
 ## 4 Gene Expression
 
-The program will display another plot to view gene expression. This plot will be saved under ```02-Scanpy/images```. This color codes the strength of gene expression for each cell in the data on the umap. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will sample the first 2 genes in the data.
+The program will display another plot to view gene expressions. This plot will be saved under ```02-Scanpy/images```. This color codes the strength of gene expression for each cell in the data on the plot. Purple points indicate a cell with no expression while more green and yellow points indicate higher expression.  Users can input which genes they want to view in the command arguments. If no arguments are passed, the program will sample the first 2 genes in the data.
 
 ![Gene Expression](https://drive.google.com/uc?export=view&id=1BB5c9EbUpDHJA2eJ2ri6Voi4W9Kr7X5B)
 
@@ -539,7 +584,7 @@ The program will display another plot to view gene expression. This plot will be
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: Gm1992, Rp1
 ```
 
-Following this is an opportunity for the user to view other genes now that the data has been processed. A prompt will appear allowing users to repeatedly view as many genes to their liking. Enter a list of genes separated commas to be viewed, then a new graph will appear showing those genes' expression. Each visualization will be saved under ```02-Scanpy/Images```.
+Following this is an opportunity for the user to view other gene expressions now that the data has been processed. A prompt will appear allowing users to repeatedly view as many genes to their liking. Enter a list of genes separated by commas to be viewed, then a new graph will appear showing those genes' expression. Each visualization will be saved under ```02-Scanpy/Images```.
 
 ```
 Enter the gene(s) you wish to visualize separated by commas (,). Enter "-list page_#" to view a list of genes or "-exit" to proceed with the program: -list 50
@@ -557,13 +602,14 @@ Users could also print out a list of all the genes in alphabetical order a handf
 To exit the program, simply enter ```-exit```
 
 Output:
--Gene expression umap plots
+
+- Gene expression plots
 
 ---
 
 ## 5 Data Annotation
 
-The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ```run#_adata.h5ad``` which can be used for ```annotate.py```. The program will annotate the data using the marker gene file and the cluster results. More about the marker gene file can be read [here](#1d-marker-gene-file-format).
+The following steps could be repeated using ```annotate.py``` should the user want to experiment with the parameters without having to go through the filtering process again. At this stage, the program will export the processed data as ```run#_*species*_*tissue*_adata_filtered.h5ad``` which can be used for ```annotate.py```. The program will annotate the data using the marker gene file and the cluster results. More about the marker gene file can be read [here](#1d-marker-gene-file-format).
 
 ---
 
@@ -577,13 +623,17 @@ Once the program finishes annotating the data, the program will display a final 
 
 ### 5ai Annotation Revisited: Parameter tuning
 
+<<<<<<< HEAD
+At this stage, the user would be able to see the results of the annotation, and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m. 
+=======
 At this stage, the user would be able to see the results of the annotation and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
-Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
+**Cluster resolution** affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
 
-K represents the top K genes to include or "vote" for in the scoring algorithm. A K value too low will result in falsely unidentified cells, while a K value too high would heavily affect performance only to converge towards the similar results.
+**K** represents the top K differentially expressed genes from each cluster to include or "vote" for in the scoring algorithm. A K value too low will result in falsely unidentified cells, while a K value too high would heavily affect performance only to converge towards similar results.
 
-m represents the number of bins used to split the data based on their distance (calculated during clustering) so that the data can be annotated in groups with similar properties. A m value too low will result in poor annotation, while a m value too high would heavily affect perform only to converge towards similar results.
+**m** represents the number of bins used to split the data based on their distance (calculated during clustering) so that the data can be annotated in groups with similar properties. A m value too low will result in poor annotation, while a m value too high would heavily affect performance only to converge towards similar results.
 
 The user can repeatedly adjust and view the results of the cluster until they are satisfied. To continue with the program, simply give a blank input.
 
@@ -593,18 +643,31 @@ The user can repeatedly adjust and view the results of the cluster until they ar
 
 ![Annotation output excel file](https://drive.google.com/uc?export=view&id=19uVckwG7VSTjeI6OY7z817G5TXKhak4r)
 
+<<<<<<< HEAD
+The last step the program will do is export an .xlsx file with the annotated data. The file will be exported to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns: 
+
+- The sequence is the barcodes for each cell
+=======
 The last step program will do is export an .xlsx file with the annotated data. The file will be exorted to ```03-ScoreCT/Annotation_Exports``` The file will have 4 columns:
 
 - The sequence is the raw cell sequence from the fastq files
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 - n_genes: the number of genes expressed in the cell
 - cluster: the cluster group the cell is in
 - cell_type: annotation of the cell
+
+Additionally, a ```run#_*species*_*tissue*_adata_filtered.h5ad``` will be exported that can be used in future projects.
+
+Output:
+
+- .xlsx file for the annotation
+- .h5ad file of the annotated adata
 
 ---
 
 ### 5c Arguments
 
-```annotate.py``` will run exactly the same as ```scRCT.py```'s annotation step. This can be used to re-annotate the data without having to go through the filtered process again. The only requirement is the ```adata.h5ad``` file that is exported by scRCT.py once filterig had finished. This is the post-filtered version of the counted data and is saved under ```02-Scanpy/Adata```. The arguments for the program match ```scRCT.py```, with the exception of ```--adata```.
+```annotate.py``` will run exactly the same as ```scRCT.py```'s annotation step. This can be used to re-annotate the data without having to go through the filtered process again. The only requirement is having the ```adata_filtered.h5ad``` file that is exported by ```scRCT.py``` once filtering has finished. This is the post-filtered version of the counted data and is saved under ```02-Scanpy/Adata```. The arguments for the program match ```scRCT.py```, with the exception of ```--adata```.
 
 ```
 python3 annotate.py --adata=FILEPATH [-disable_interrupts]
@@ -612,7 +675,7 @@ python3 annotate.py --adata=FILEPATH [-disable_interrupts]
 [--tissue TISSUE] [--K TOP_K] [--bins M]
 
 --adata FILEPATH(REQUIRED)
-	File path of the post-filtered adata.h5ad file.
+	File path of the post-filtered adata_filtered.h5ad file.
 -disable_interrupts
 	Disable program interruptions for user analysis and 	argument prompt.
 --markers MARKER_FILE (default: Human and Mouse tissues)
@@ -622,11 +685,22 @@ python3 annotate.py --adata=FILEPATH [-disable_interrupts]
 	Visualize the data using ```umap``` or ```t-SNE```. This 
 	arugment will NOT be prompted.
 --species SPECIES (default: "")
+<<<<<<< HEAD
+	Species of the sample (ex. human, mouse). Will be used in 
+	naming the output files and directories. Will be used to 
+	retrieve marker gene data if file not provided (Human and 
+	Mouse only). Users will be prompted for species if marker 
+	gene file is not provided even on ```-disable_interrupts```.
+=======
 	Species of the sample (ex. human, mouse). Will be used in 	naming the output files and directories.
+>>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 --tissue TISSUE (default: "")
-	Tissue type of the sample (ex. brain, heart, etc.). Will 
+	Tissue type of the sample (ex. brain, heart, etc.). Will be 
+	used in naming the output files and directories. Will 
 	be used to retrieve marker gene data if file not provided 
-	(Human and Mouse only).
+	(Human and Mouse only). Users will be prompted for tissue 
+	if marker gene file is not provided even on 
+	```-disable_interrupts```.
 --K TOP_K (default: 450)
 	Top K genes to include in annotation scoring.
 --bins M (default: 20)

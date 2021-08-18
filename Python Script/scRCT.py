@@ -698,9 +698,9 @@ try:
             gene_i += 1
 
     """Export adata to use in annotate.py"""
-    adata.write(adata_dir+"run"+str(run_num)+"_"+output_name+"_adata.h5ad")
-    VV_file_save(adata_dir, "run"+str(run_num)+"_"+output_name+"_adata.h5ad", "Successfully exported adata")
-    print("\n*Exported data to \'run"+str(run_num)+"_adata.h5ad\'. The following steps can be repeated using \'annotate.py\' and this program can safely exited.*")
+    adata.write(adata_dir+"run"+str(run_num)+"_"+output_name+"_adata_filtered.h5ad")
+    VV_file_save(adata_dir, "run"+str(run_num)+"_"+output_name+"_adata_filtered.h5ad", "Successfully exported adata_filtered")
+    print("\n*Exported data to \'run"+str(run_num)+"_adata_filtered.h5ad\'. The following steps can be repeated using \'annotate.py\' and this program can safely exited.*")
     if not os.path.isfile(annotate_py_dir+"annotate.py"):
         print("WARNING: \"annotate.py\" is missing from the environment! Please reinstall the package to prevent any more missing files!")
 
@@ -902,6 +902,10 @@ try:
     adata.obs.to_excel(annotation_dir+ann_output_name)
     VV_file_save(annotation_dir, ann_output_name, "Exported \""+ann_output_name+"\"")
 
+    #Export adata for future uses
+    adata.write(adata_dir + "run" + str(run_num) + "_" + output_name + "_adata_annotated.h5ad")
+    VV_file_save(adata_dir, "run" + str(run_num) + "_" + output_name + "_adata_annotated.h5ad", "Successfully exported adata_annotated")
+
     #Log final parameters if on interrupt run
     if interrupt:
         log("\n***Final Parameters***\n"
@@ -922,6 +926,7 @@ try:
 
     #Message about other python script
     print("*Annotation exported to \'"+ann_output_name+'\'*')
+    print("*Exported data to \'run" + str(run_num) + "_adata_annotated.h5ad\'*")
     log("*Program finished running without any errors*")
 except Exception:
     traceback.print_exc()
