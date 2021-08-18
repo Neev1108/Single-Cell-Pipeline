@@ -2,7 +2,6 @@
 
 #SBATCH -J cellranger_job_mkref
 #SBATCH --export=ALL
-#SBATCH --signal=2
 #SBATCH --output="cellranger_job_mkref.%J.out"
 #SBATCH --mem=40g
 
@@ -48,3 +47,4 @@ echo "total runtime(m): $runtime_m"
 
 runtime_h=$(echo "scale=2; $runtime / $sec_per_hour;" | bc)
 echo "total runtime(hr): $runtime_h"
+

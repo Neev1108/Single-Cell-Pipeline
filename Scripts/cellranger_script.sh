@@ -3,7 +3,7 @@
 #SBATCH -J cellranger_job
 #SBATCH --export=ALL
 #SBATCH --signal=2
-#SBATCH -output="cellranger_job_counts.%J.out"
+#SBATCH -o cellranger_job_counts.%J.out
 #SBATCH --mem=40g
 
 
@@ -24,6 +24,7 @@ sample=$4
 expect_cells=$5
 local_cores=$6
 local_mem=$7
+output_directory=$8
 
 
 
@@ -40,6 +41,9 @@ call="cellranger count --id=$string_id \
 echo $call
 eval $call
 echo “”
+
+call1 = "mv $string_id $output_directory"
+eval $call1
 
 
 echo ""
