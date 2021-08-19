@@ -457,11 +457,7 @@ Input min_genes threshold or leave blank to use default settings:
 Input min_cells threshold or leave blank to use 1:
 ```
 
-<<<<<<< HEAD
 Default values are provided should the user leave the input blank. 
-=======
-Default values are provided should the user not provide an input and leave the input blank.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 ---
 
@@ -493,20 +489,11 @@ This would be repeated for the cell distribution, where 'x' is the minimum numbe
 
 ### 2c Remove Highly Variable Genes
 
-<<<<<<< HEAD
 The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the likelihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable. 
-=======
-The program will then remove genes that are highly variable in the data to reduce variablity in clustering later on. No plots will be displayed and no arguments are required for this step as the values have been predetermined. To reduce the liklihood of removing noteworthy genes, parameters were adjusted to require stricter conditions to be deemed highly variable.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 <details>
   <summary>Explanation of Algorithm</summary>
 
-```
-sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
-```
-
-<<<<<<< HEAD
   ```
   sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
   ```
@@ -515,11 +502,6 @@ sc.pp.highly_variable_genes(adata, flavor='seurat', min_disp=2)
   This program uses R's Seurat's algorithm.
 
   Each gene is put into 20 'bins' based on their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
-=======
-This program use's R's Seurat's algorithm.
-
-Each gene is put into 20 'bins' based and their mean and variance. Each gene is then normalized based on the other genes in their bin. If a gene's normalized dispersion is greater or equal to a z-score of 2 (~98th percentile) AND the gene has a low mean cell count, it is marked highly variable.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 </details>
 
@@ -532,15 +514,9 @@ Output:
 
 ## 3 Clustering
 
-<<<<<<< HEAD
 Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and their differences [here](https://www.nature.com/articles/s41598-019-41695-z). 
 
 The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k' can be adjusted using ```--neighbors``` (this parameter will not be prompt during a normal program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored. 
-=======
-Clustering is performed using the Leiden alogirthm, an improved version of the Louvain algorithm. More can be read on the algorithms and theirs differences [here](https://www.nature.com/articles/s41598-019-41695-z).
-
-The Leiden algorithm uses the distances calculated by the KNN algorithm to perform its calculation. For those familiar with KNN, 'k can be ajusted using ```--neighbors``` (this parameter will not be prompt during a program run). Note that the program will give a warning while this is performed. This just means it will proceed to calculate the PCA of the data and can be ignored.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 After this is done, a window will pop to display a plot visualizing the clusters. This will be saved under ```02-Scanpy/images```. Close the graph to move on with the program.
 
@@ -554,11 +530,7 @@ Output:
 
 ### 3a Clustering Revisited: Resolution
 
-<<<<<<< HEAD
 At this stage, the user would be able to see the results of the clustering, and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution. 
-=======
-At this stage, the user would be able to see the results of the clustering and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the cluster resolution.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 Cluster resolution affects the number of clusters in the output. The higher the value, the more clusters would be in the results. The default setting for cluster resolution is ```0.5```.
 
@@ -623,11 +595,7 @@ Once the program finishes annotating the data, the program will display a final 
 
 ### 5ai Annotation Revisited: Parameter tuning
 
-<<<<<<< HEAD
 At this stage, the user would be able to see the results of the annotation, and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m. 
-=======
-At this stage, the user would be able to see the results of the annotation and it may not be to their liking. Instead of running the program all over again, the user could take this opportunity to repeat the previous steps and adjust the the three values that affect the algorithm: cluster resolution, K, and m.
->>>>>>> bd7b98b2111f0a682daa28a9c61dfb42179ad059
 
 **Cluster resolution** affects the number of clusters in the output. The higher the value, the more clusters would be in the result. The default setting for cluster resolution is ```0.5```.
 
