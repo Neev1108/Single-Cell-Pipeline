@@ -135,7 +135,7 @@ A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/m
 
 Example script run: 
 ```
-sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
+sbatch make_reference.slurm Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
 ```
 
 This script runs the following command:
@@ -253,7 +253,7 @@ A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/c
 
 Example script run:
 ```
-sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR13040579 8000 1 32
+sbatch cellranger_count.slurm plant_dataset Arabidopsis Arabidopsis_dataset SRR13040579 8000 1 32
 ```
 NOTE: to include all FASTQ samples in a directory, pass a comma-separated sample name list to the --sample attribute.
 
