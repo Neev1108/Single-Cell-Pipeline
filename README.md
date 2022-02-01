@@ -77,15 +77,15 @@ Example script run:
 sbatch filter_genes_mkgtf.slurm  Arabidopsis_thaliana.TAIR10.51.gtf Arabidopsis_filtered.gtf
 ```
 
-Below are details for the command and filters in the filter_genes_mkgtf.slurm script:
+This script runs the following command:
 
 ```
 cellranger mkgtf input.gtf output.gtf  --attribute=gene_biotype:protein_coding
 ```
 
-Cell Ranger _mkgtf_ has one parameter:
+Command parameters:
 
-* `--attribute` – Use this command multiple times to filter our genes. An example is below.
+* `--attribute` – Use this flag multiple times to filter out specific types of genes. An example is below.
 
 > --attribute=gene_biotype:protein_coding
 >
@@ -138,19 +138,17 @@ Example script run:
 sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
 ```
 
-This script contains the following command:
+This script runs the following command:
 ```
 cellranger mkref --genome --fasta --genes
 ```
 
-Explanation of each parameter is below:
-
+Command parameters:
 * `--genome` – genome name
 * `--fasta` – path to fasta file with whole reference genome
 * `--genes` – path to gtf file
 
 Output:
-
 - fasta file
 - genes file
 - reference.json
@@ -260,13 +258,12 @@ sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR130
 ```
 NOTE: to include all FASTQ samples in a directory, pass a comma-separated sample name list to the --sample attribute.
 
-This script contains the following command:
+This script runs the following command:
 ```
 cellranger count --id --transcriptome --fastqs --sample --expect-cells --localcores --localmem
 ```
 
-Explanation of each parameter is below:
-
+Command parameters:
 * `--id` – A string id of the job. This will be the name of the output folder. Recommended to be placed under ```01-CellRanger/CellRanger_Output```.
 * `--transcriptome` – path to the reference transcriptome directory. Recommended to be located under ```01-CellRanger/Reference_Annotation```.
 * `--fastqs` – path to fastqs directory. Recommended to be located under ```00-Raw_Data/Fastq```.
@@ -276,7 +273,6 @@ Explanation of each parameter is below:
 * `--localmem` – amount of local memory for the job. (will use 90% of available memory if not specified so be specific)
 
 Output:
-
 - web summary
 - metrics summary in csv format
 - possorted_genome_bam file (this will be the majority of the file size, might be upwards of 5gb)
