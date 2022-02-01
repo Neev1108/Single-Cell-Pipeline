@@ -85,7 +85,7 @@ cellranger mkgtf input.gtf output.gtf  --attribute=gene_biotype:protein_coding
 
 Command parameters:
 
-* `--attribute` – Use this flag multiple times to filter out specific types of genes. An example is below.
+* `--attribute` – Pass this parameter multiple times to filter out specific types of genes. An example is below.
 
 > --attribute=gene_biotype:protein_coding
 >
@@ -163,22 +163,21 @@ The next step is to use Cell Ranger _count_ to make a cells by genes counts matr
 
 ### 2a Datasets
 
-Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention.
+Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention:
 
 [Sample Name]_S1_L00[Lane Number]_[Read Type]_001.fastq.gz
 
 Where Read Type is one of:
 
-I1: Sample index read (optional)
-R1: Read 1
-R2: Read 2
+- I1: Sample index read (optional)
+- R1: Read 1
+- R2: Read 2
 
 For example: 
 
-An acceptable FASTQ file name: GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw_S1_L001_R1_001.fastq.gz
+- An acceptable FASTQ file name: GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw_S1_L001_R1_001.fastq.gz
 
-What Cell Ranger thinks the "sample name" is: "GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw"
-
+- What Cell Ranger thinks the "sample name" is: "GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw"
 
 <details>
   <summary>Example using SRA data</summary>
