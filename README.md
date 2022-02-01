@@ -10,7 +10,6 @@
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
     - [**1c. Cellranger mkref**](#1c-cellranger-mkref)
-    - [**1c. Test with Scripts**](#1d-test-with-scripts)
   - **2. Cellranger Counts Setup**
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cellranger counts**](#2b-cellranger-counts)
@@ -49,17 +48,19 @@
 
 # Cellranger
 
+Cell Ranger _count_ command uses FASTQ files to generate a cell by gene count matrix. 
+
 ## 1. Cellranger Reference Transcriptome
 
-To count a dataset with cellranger, a reference transcriptome and the fastq files are required. The first step of this pipeline involves making a reference transcriptome, if not using cellranger's given transcriptomes (which are currently only human and mice transcriptomes).
+Cell Ranger _count_ requires a reference transcriptome. Below are instructions for creating a Cell Ranger reference transcriptome from a whole genome fasta (.fa) file and a Gene Transfer Format/GTF (.gtf) file. 
 
-For a simple example, we will be using a plant dataset, Arabidopsis Thaliana to run analysis on.
+The example used is _Arabidopsis Thaliana_.
 
 ---
 
 ### 1a ENSEMBL files
 
-> ** Before running mkref, we need 2 important files: a whole genome fasta file, and a gtf file, preferably both from Ensembl. While files from other places might work, there might changes needed in the file, for example contigs needed to be changed in the gtf file. The whole genome fasta file will need to be one file, instead of split of files for each chromosome.**
+> ** Before running _mkref_, we need 2 important files: a whole genome fasta file, and a GTF file, preferably both from Ensembl. While files from other places might work, there might changes needed in the file, for example contigs needed to be changed in the GTF file. The whole genome fasta file will need to be one file, instead of split of files for each chromosome.**
 
 On EMSEMBL, the whole genome file is normally named as *.primary_assembly.fa. If no primary_assembly file is available, top_level.fa will also work fine.
 
@@ -67,13 +68,22 @@ On EMSEMBL, the whole genome file is normally named as *.primary_assembly.fa. If
 
 ### 1b Cellranger mkgtf
 
-Before running the mkref method, we can also use cellranger's mkgtf method to filter out the gtf file of annotated genes we might not need.The command is below:
+(OPTIONAL) Before creating a reference transcriptome with _mkref_, we can use the Cell Ranger _mkgtf_ method to filter out annotated genes we might not need from the .gtf file. 
+
+A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/filter_genes_mkgtf.slurm 
+
+Example script run:
+```
+sbatch filter_genes_mkgtf.slurm  Arabidopsis_thaliana.TAIR10.51.gtf Arabidopsis_filtered.gtf
+```
+
+Below are details for the command and filters in the filter_genes_mkgtf.slurm script:
 
 ```
 cellranger mkgtf input.gtf output.gtf  --attribute=gene_biotype:protein_coding
 ```
 
-This command only has one parameter:
+Cell Ranger _mkgtf_ has one parameter:
 
 * `--attribute` – Use this command multiple times to filter our genes. An example is below.
 
@@ -119,10 +129,18 @@ Output:
 
 ### 1c Cellranger mkref
 
-Cellranger has a command to make transcriptomes called:
+Use Cell Ranger _mkref_ to create a reference transcriptome from a GTF file and a whole genome fasta file.
 
+A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/make_reference.slurm 
+
+Example script run: 
 ```
-cellranger mkref --genome --fasta --genes.
+sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
+```
+
+This script contains the following command:
+```
+cellranger mkref --genome --fasta --genes
 ```
 
 Explanation of each parameter is below:
@@ -138,42 +156,15 @@ Output:
 - reference.json
 - STAR index folder (most important)
 
----
-
-### 1d Test with scripts
-
-Let's test our Arabiodopsis dataset with our Slurm scripts. After getting required files, lets make a reference transcriptome.
-
-- filter_genes_mkgtf.sh (makes filtered gtf file)
-- make_reference.sh (makes reference transcriptome directory)
-
-For filtering genes, run:
-
-```
-sbatch filter_genes_mkgtf.sh  Arabidopsis_thaliana.TAIR10.51.gtf Arabidopsis_filtered.gtf
-```
-
-The slurm filter_genes_mkgtf.sh script already has some filters. Edit for which filters to continue with.
-
-Now that the genes are filtered, let's make the reference transcriptome.
-
-For making a reference transcriptome, run:
-
-```
-sbatch make_reference.sh Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
-```
 
 We now have a folder called Arabidopsis which is our reference transcriptome.
 
 ## 2. Cellranger Counts Setup
 
-Our next step will be to make a counts matrix of our dataset.
+The next step is to use Cell Ranger _count_ to make a cells by genes counts matrix of our dataset.
 
 ### 2a Datasets
 
-Cellranger has strict requirements for running count on datasets. The counts function will need fastq files in the format:
-
-```
 Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention.
 
 [Sample Name]_S1_L00[Lane Number]_[Read Type]_001.fastq.gz
@@ -184,84 +175,97 @@ I1: Sample index read (optional)
 R1: Read 1
 R2: Read 2
 
-incompatible: SRR6334436_1.fastq
+For example: 
 
-compatible: SRR6334436_S1_L001_R1_001.fastq
+An acceptable FASTQ file name: GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw_S1_L001_R1_001.fastq.gz
 
-```
+What Cell Ranger thinks the "sample name" is: "GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw"
 
-If downloading a dataset from NCBI using SRA, then please first check if the data access has a BAM file. If it does, you can use cellrangers bamtofastq function. Most datasets do not, so we will not discuss this function.
 
-A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions:
+<details>
+  <summary>Example using SRA data</summary>
 
-> SRR IDs are run accessions, and the fastq files will normally have 2 fastq files, a read1 and a read 2.
->
-> SRX IDS are experiment accessions, and they correspond to the libraries in cellranger.
->
-> SRS IDs are sample accessions, and they correspond to cell samples in cellranger.
->
-> SRP IDs are study accessions, and they can contain multiple organisms.
+	If downloading a dataset from NCBI using SRA, then please first check if the data access has a BAM file. If it does, you can use cellrangers bamtofastq 	function. Most datasets do not, so we will not discuss this function.
 
-.SRA files downloaded will need to be extracted into fastq files using this function from SRA toolkit:
+	A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions:
 
-```
-fastq-dump --split-files SRR6334436
-```
+	> SRR IDs are run accessions, and the fastq files will normally have 2 fastq files, a read1 and a read 2.
+	>
+	> SRX IDS are experiment accessions, and they correspond to the libraries in cellranger.
+	>
+	> SRS IDs are sample accessions, and they correspond to cell samples in cellranger.
+	>
+	> SRP IDs are study accessions, and they can contain multiple organisms.
 
-which will output 2 files:
+	.SRA files downloaded will need to be extracted into fastq files using this function from SRA toolkit:
 
-- SRR6334436_1.fastq
-- SRR6334436_2.fastq
+	```
+	fastq-dump --split-files SRR6334436
+	```
 
-These will need to be renamed as shown above.
+	which will output 2 files:
 
-The final file structure for the fastq files will look like below (this is for Arabidopsis):
+	- SRR6334436_1.fastq
+	- SRR6334436_2.fastq
 
-> Arabidopsis_dataset
->
-> ├── SRR13040579_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040579_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040580_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040580_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040581_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040581_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040582_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040582_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040583_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040583_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040584_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040584_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040585_S1_L001_R1_001.fastq.gz
->
-> ├── SRR13040585_S1_L001_R2_001.fastq.gz
->
-> ├── SRR13040586_S1_L001_R1_001.fastq.gz
->
-> └── SRR13040586_S1_L001_R2_001.fastq.gz
+	These will need to be renamed as shown above.
+
+	The final file structure for the fastq files will look like below (this is for Arabidopsis):
+
+	> Arabidopsis_dataset
+	>
+	> ├── SRR13040579_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040579_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040580_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040580_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040581_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040581_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040582_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040582_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040583_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040583_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040584_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040584_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040585_S1_L001_R1_001.fastq.gz
+	>
+	> ├── SRR13040585_S1_L001_R2_001.fastq.gz
+	>
+	> ├── SRR13040586_S1_L001_R1_001.fastq.gz
+	>
+	> └── SRR13040586_S1_L001_R2_001.fastq.gz
+	
+</details>
 
 ### 2b Cellranger Counts
 
-Now we will actually run the cellranger counts method. (Note. This may be computationally intensive, mostly on RAM. Please check your system specs to make sure it works correctly)
+Once you have a Cell Ranger reference transcriptome file, and properly named FASTQ files, you can run Cell Ranger _counts_ to generate a cells by genes counts matrix.
 
-Cellranger counts work as the following:
+A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/cellranger_count.slurm 
 
+Example script run:
+```
+sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR13040579 8000 1 32
+```
+NOTE: to include all FASTQ samples in a directory, pass a comma-separated sample name list to the --sample attribute.
+
+This script contains the following command:
 ```
 cellranger count --id --transcriptome --fastqs --sample --expect-cells --localcores --localmem
 ```
 
-Explanation of each paramater is below:
+Explanation of each parameter is below:
 
 * `--id` – A string id of the job. This will be the name of the output folder. Recommended to be placed under ```01-CellRanger/CellRanger_Output```.
 * `--transcriptome` – path to the reference transcriptome directory. Recommended to be located under ```01-CellRanger/Reference_Annotation```.
@@ -283,14 +287,6 @@ Output:
 
 ---
 
-cellranger_script.sh will be our slurm script for doing the count function.
-
-Sample command to run bash slurm script is:
-
-```
-sbatch cellranger_script.sh plant_dataset Arabidopsis Arabidopsis_dataset SRR13040579 8000 1 32
-
-```
 
 ### Notes
 
@@ -391,11 +387,11 @@ python3 scRCT.py --filepath=CELLRANGER_OUTPUT [--markers MARKER_FILE]
 
 ### 1d Marker Gene File Format
 
-Only Human and Mouse marker genes are available to the program. Annotating other species would require your own marker gene file. Please place your files under ```03-ScoreCT/Marker_genes```. If a file is not provided, the program will not be able to annotate the data!
+The ScoreCT cell annotation package automatically pulls mouse and human cell type annotations from CellMarkerDB. If your dataset is from another species, you must provide your own marker gene file. Please place your files under ```03-ScoreCT/Marker_genes```. 
 
 ```
 Marker gene file format example (csv):
-Cell, Cell, Cell
+CellType, CellType, CellType
 gene, gene, gene
 gene, gene, gene
 gene,     , gene
@@ -404,7 +400,7 @@ etc.,      ,
 
 ![Marker gene file viewed in Microsoft Excel](https://drive.google.com/uc?export=view&id=16mGCDYPs4OOm_fj0oCieUKgqfZRmnfO_)
 
-The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell as less genes that the maximum number of columns, simply leave those entries blank or enter 'NA'.
+The file must be in csv format. Cell names should be listed in the first row followed by their corresponding genes listed below. If a cell type has fewer genes than the maximum number of columns, simply leave those entries blank or enter 'NA'.
 
 **Because it is more common to find files that follow this format but tranposed (i.e. cell names in the first *column* with genes list in the following *columns*), the program will automatically tranpose the data and load the data, along with saving it as ```*filename*_corrected.csv```.**
 
