@@ -5,13 +5,13 @@
 # Table of contents
 
 - [**Software used**](#software-used)
-- [**Cellranger**](#Cellranger)
+- [**Cell Ranger**](#Cell Ranger)
   - **0. Directory Structure**
-  - **1. Cellranger - make reference transcriptome**
+  - **1. Cellranger Reference Transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
     - [**1c. Cellranger mkref**](#1c-cellranger-mkref)
-  - **2. Cellranger Counts Setup**
+  - **2. Cellranger Count Setup**
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cell Ranger count**](#2b-cellranger-count)
     - [**2c. Cell Ranger aggr**](#2c-cellranger-aggr)
@@ -80,7 +80,7 @@ Create a directory for your dataset with the GLDS number called GLDS-#. Within t
 >
 > ├── [tSNE_UMAP](#5a-visualization)
 
-# Cellranger
+# Cell Ranger
 
 Cell Ranger _count_ command uses FASTQ files to generate a cell by gene count matrix. 
 
@@ -193,7 +193,7 @@ We now have a folder called Arabidopsis which is our reference transcriptome.
 
 Place this folder in the GeneLab scRNAseq Reference Transcriptome folder.
 
-## 2. Cellranger Counts Setup
+## 2. Cellranger Count Setup
 
 The next step is to use Cell Ranger _count_ to make a cells by genes counts matrix of our dataset.
 
@@ -283,7 +283,7 @@ For example:
 	
 </details>
 
-### 2b Cell Ranger Count
+### 2b Cell Ranger count
 
 Once you have a Cell Ranger reference transcriptome file, and properly named FASTQ files, run Cell Ranger _count_ to generate a cells by genes counts matrix for each individual sample.
 
@@ -324,7 +324,7 @@ This script also automatically generates a CSV file in ``01-CellRanger/CellRange
 
 ---
 
-### 2c Cell Ranger Aggr
+### 2c Cell Ranger aggr
 
 After running Cell Ranger _count_, you can aggregate all samples together into a single cell by gene matrix using Cell Ranger _aggr_.
 
