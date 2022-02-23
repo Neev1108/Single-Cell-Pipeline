@@ -6,20 +6,22 @@
 
 - [**Software used**](#software-used)
 - [**Cellranger**](#Cellranger)
+  - **0. Directory Structure**
   - **1. Cellranger - make reference transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
     - [**1c. Cellranger mkref**](#1c-cellranger-mkref)
   - **2. Cellranger Counts Setup**
     - [**2a. Datasets**](#2a-datasets)
-    - [**2b. Cellranger counts**](#2b-cellranger-counts)
+    - [**2b. Cell Ranger count**](#2b-cellranger-count)
+    - [**2c. Cell Ranger aggr**](#2c-cellranger-aggr)
 - [**scRCT and annotate Python Script**](#scRCT-and-annotate-Python-Script)
   - [**1. Setup and Introduction**](#1-setup-and-introduction)
     - [**1a. Packages**](#1a-packages)
     - [**1b. Prompts**](#1b-prompts)
     - [**1c. Arguments**](#1c-arguments)
     - [**1d. Marker Gene File Format**](#1d-marker-gene-file-format)
-    - [**1e. Directory Structure**](#1e-directory-structure)
+
   - [**2. Quality control and User analysis tools**](#2-quality-control-and-user-analysis-tools)
     - [**2a. Highest expressed genes**](#2a-highest-expressed-genes)
     - [**2b. Gene and Cell distribution**](#2b-gene-and-cell-distribution)
@@ -45,6 +47,38 @@
 | SRA Toolkit | 2.11.0 | https://github.com/ncbi/sra-tools |
 | Scanpy | 1.8 | https://scanpy.readthedocs.io/en/stable/ |
 | ScoreCT | 1.0 | https://github.com/LucasESBS/scoreCT |
+
+## 0. Directory Structure
+
+Create a directory for your dataset with the GLDS number called GLDS-#. Within this directory, create the directory structure below by running /Scripts/scRNAseq_mkdir.sh
+
+> 00-Raw_Data
+>
+> ├── [Fastq](#2b-cellranger-counts)
+>
+> ├── FastQC_Reports
+>
+> 01-CellRanger
+>
+> ├── [CellRanger_Output](#2b-cellranger-counts)
+>
+> ├── [Reference_Annotation](#2b-cellranger-counts)
+>
+> 02-Scanpy
+>
+> ├── [Adata](#5-data-annotation)
+>
+> ├── [Images](#2-quality-control-and-user-analysis-tools)
+>
+> ├── VV_logs
+>
+> 03-ScoreCT
+>
+> ├── [Annotation_Exports](#5b-export-annotation)
+>
+> ├── [Marker_genes](#1d-marker-gene-file-format)
+>
+> ├── [tSNE_UMAP](#5a-visualization)
 
 # Cellranger
 
@@ -129,7 +163,7 @@ Output:
 
 ### 1c Cellranger mkref
 
-Use Cell Ranger _mkref_ to create a reference transcriptome from a GTF file and a whole genome fasta file.
+Use Cell Ranger _mkref_ to create a reference transcriptome from a GTF file and a whole genome fasta file. If GeneLab already has an Ensembl RNAseq reference transcriptome for this organism, use those files.
 
 A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/make_reference.slurm 
 
@@ -157,11 +191,15 @@ Output:
 
 We now have a folder called Arabidopsis which is our reference transcriptome.
 
+Place this folder in the GeneLab scRNAseq Reference Transcriptome folder.
+
 ## 2. Cellranger Counts Setup
 
 The next step is to use Cell Ranger _count_ to make a cells by genes counts matrix of our dataset.
 
 ### 2a Datasets
+
+Place your FASTQ files into the GLDS-#/00-Raw_Data directory. 
 
 Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention:
 
@@ -245,33 +283,34 @@ For example:
 	
 </details>
 
-### 2b Cellranger Counts
+### 2b Cell Ranger Count
 
-Once you have a Cell Ranger reference transcriptome file, and properly named FASTQ files, you can run Cell Ranger _counts_ to generate a cells by genes counts matrix.
+Once you have a Cell Ranger reference transcriptome file, and properly named FASTQ files, run Cell Ranger _count_ to generate a cells by genes counts matrix for each individual sample.
 
 A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/cellranger_count.slurm 
 
 Example script run:
 ```
-sbatch cellranger_count.slurm plant_dataset Arabidopsis Arabidopsis_dataset SRR13040579 8000 1 32
+sbatch cellranger_count.slurm GLDS# Organism #ExpectedCellsPerSample
+sbatch cellranger_count.slurm 402 Mus_musculus 8000
 ```
-NOTE: to include all FASTQ samples in a directory, pass a comma-separated sample name list to the --sample attribute.
+NOTE: the "Organism" attribute must match the formatting of the reference transcriptome folder's name.
 
-This script runs the following command:
+This script runs the following command on each FASTQ file in the /00-Raw_Data directory.
 ```
 cellranger count --id --transcriptome --fastqs --sample --expect-cells --localcores --localmem
 ```
 
 Command parameters:
-* `--id` – A string id of the job. This will be the name of the output folder. Recommended to be placed under ```01-CellRanger/CellRanger_Output```.
-* `--transcriptome` – path to the reference transcriptome directory. Recommended to be located under ```01-CellRanger/Reference_Annotation```.
-* `--fastqs` – path to fastqs directory. Recommended to be located under ```00-Raw_Data/Fastq```.
-* `--sample` – name of samples to run. If multiple samples, can have multiple inputs comma-seperated. ex. SRR13040579, SRR13040580 etc.
+* `--id` – A string id of the job. This is automatically derived from each sample name.
+* `--transcriptome` – path to the reference transcriptome directory. This is automatically derived from the organism name.
+* `--fastqs` – path to fastqs directory. This is automatically derived from each sample name.
+* `--sample` – name of sample to run. The SLURM script iterates through all FASTQ files in the directory.
 * `--expected-cells` – an optimal parameter if number of cells is known beforehand. Default is 3000 cells.
-* `--localcores` – number of cores to run the job
-* `--localmem` – amount of local memory for the job. (will use 90% of available memory if not specified so be specific)
+* `--localcores` – number of cores to run the job. Automatically set to 78.
+* `--localmem` – amount of local memory for the job. Overridden by settings in the SLURM script.
 
-Output:
+The output for each sample can be found in ```01-CellRanger/CellRanger_Output``` in a folder named for that sample.
 - web summary
 - metrics summary in csv format
 - possorted_genome_bam file (this will be the majority of the file size, might be upwards of 5gb)
@@ -280,18 +319,32 @@ Output:
 - analysis (some cellranger specific analysis, can be used to validate and test some scanpy downstream analysis)
 - cloupe file (a file to see visualization on cellranger's cloupe software)
 
+This script also automatically generates a CSV file in ``01-CellRanger/CellRanger_Output``` called "GLDS-#_aggr_CSV.csv" which is used for running [**2c. Cell Ranger aggr**](#2c-cellranger-aggr).
+
+
 ---
 
+### 2c Cell Ranger Aggr
 
-### Notes
+After running Cell Ranger _count_, you can aggregate all samples together into a single cell by gene matrix using Cell Ranger _aggr_.
 
-> We only use one sample from the 8 we have on Arabidopsis. To use all 8, put all sample names comma-seperated in the sample parameter.
->
-> In our above example, the slurm script will set a default memory of 40gb and then use 32 gb in the cellranger command.
->
-> For the slurm script, you can change it to sbatch --mem=70g cellranger_script.sh... for the slurm memory, but the cellranger memory must be lower. Therefore using 64 will work if using 70g in slurm memory.
->
-> Do this if you might need more memory for the job.
+A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/cellranger_aggr.slurm 
+
+Example script run:
+```
+sbatch cellranger_count.slurm GLDS# 
+sbatch cellranger_count.slurm 402 
+```
+
+This script runs the following command:
+```
+cellranger aggr --id --csv --nosecondary
+```
+
+Command parameters:
+* `--id` – A string id of the job. This is automatically derived from each sample name.
+* `--csv` – path to a CSV file with paths to the Cell Ranger _count_ outputs from each FASTQ. This is automatically generated by the cellranger_count.slurm script.
+* `--nosecondary` – a flag to skip Cell Ranger secondary analysis.
 
 ---
 
@@ -400,38 +453,6 @@ The file must be in csv format. Cell names should be listed in the first row fol
 **Because it is more common to find files that follow this format but tranposed (i.e. cell names in the first *column* with genes list in the following *columns*), the program will automatically tranpose the data and load the data, along with saving it as ```*filename*_corrected.csv```.**
 
 ---
-
-### 1e Directory Structure
-
-> 00-Raw_Data
->
-> ├── [Fastq](#2b-cellranger-counts)
->
-> ├── FastQC_Reports
->
-> 01-CellRanger
->
-> ├── [CellRanger_Output](#2b-cellranger-counts)
->
-> ├── [Reference_Annotation](#2b-cellranger-counts)
->
-> 02-Scanpy
->
-> ├── [Adata](#5-data-annotation)
->
-> ├── [Images](#2-quality-control-and-user-analysis-tools)
->
-> ├── VV_logs
->
-> 03-ScoreCT
->
-> ├── [Annotation_Exports](#5b-export-annotation)
->
-> ├── [Marker_genes](#1d-marker-gene-file-format)
->
-> ├── [tSNE_UMAP](#5a-visualization)
-
-The directory structure is listed above and can be quickly created using ```scRNAseq_mkdir.sh```. Each hyperlink wlll lead to the section where that directory will be used.
 
 For each run of the program, a new ```run#_*species*_*tissue*``` directory will be created in the ```Images``` and ```tSNE_UMAP``` folder to organize each run's image output. For ```annotate.py```, it will be named ```annotate_run#_*species*_*tissue*``` instead. The name is based on the number of runs of the program, the species, and tissue inputed. Other outputs will be named similarly.
 
