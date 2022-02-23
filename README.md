@@ -199,7 +199,7 @@ The next step is to use Cell Ranger _count_ to make a cells by genes counts matr
 
 ### 2a Datasets
 
-Place your FASTQ files into the GLDS-#/00-Raw_Data directory. 
+Place your FASTQ files into the GLDS-#/00-Raw_Data directory. *Do not place any other files into this directory.*
 
 Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention:
 
@@ -207,7 +207,6 @@ Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming conven
 
 Where Read Type is one of:
 
-- I1: Sample index read (optional)
 - R1: Read 1
 - R2: Read 2
 
