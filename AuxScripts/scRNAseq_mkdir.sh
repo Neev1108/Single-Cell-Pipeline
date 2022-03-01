@@ -9,6 +9,7 @@ mkdir 01-CellRanger/CellRanger_Output
 
 mkdir 02-Scanpy/Images
 mkdir 02-Scanpy/VV_logs
+mkdir 02-Scanpy/Adata
 
 mkdir 03-ScoreCT/Marker_genes
 mkdir 03-ScoreCT/Annotation_Exports

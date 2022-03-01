@@ -88,13 +88,13 @@ import os
 import traceback
 
 #Directories
-log_dir = "../../02-Scanpy/VV_logs/"
-image_directory = "../../02-Scanpy/Images/"
-marker_dir = "../../03-ScoreCT/Marker_genes/"
-adata_dir = "../../02-Scanpy/Adata/"
-annotation_dir = "../../03-ScoreCT/Annotation_Exports/"
-annotate_py_dir = "../03-ScoreCT/"
-final_plot_dir = "../../03-ScoreCT/tSNE_UMAP/"
+log_dir = "02-Scanpy/VV_logs/"
+image_directory = "02-Scanpy/Images/"
+marker_dir = "03-ScoreCT/Marker_genes/"
+adata_dir = "02-Scanpy/Adata/"
+annotation_dir = "03-ScoreCT/Annotation_Exports/"
+annotate_py_dir = "03-ScoreCT/"
+final_plot_dir = "03-ScoreCT/tSNE_UMAP/"
 
 #V&V existance of directories
 assert os.path.exists(log_dir), log_dir+" not found. Please run \'scRNAseq_mkdir.sh\' in the current directory."
@@ -129,58 +129,60 @@ try:
         import scanpy as sc
         import seaborn as sb
         import matplotlib.pyplot as plt
-        import scorect_api as ct
+        import scorect as ct
         import openpyxl
     except:
-        print("***Some packages have not been installed. Installing now...***")
-        log("Some packages have not been installed. Attempting to install...")
+        print("Package import error")
+
+#        print("***Some packages have not been installed. Installing now...***")
+#        log("Some packages have not been installed. Attempting to install...")
 
         # Retrieve installer if not available
-        import urllib.request
-        remove = False
-        if not os.path.exists("get-pip.py"):
-            urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
-            remove = True
-        subprocess.check_call([sys.executable, "get-pip.py"])
+#        import urllib.request
+#        remove = False
+#        if not os.path.exists("get-pip.py"):
+#            urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
+#            remove = True
+#        subprocess.check_call([sys.executable, "get-pip.py"])
 
         # Download and install packages if not installed
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "numpy"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "seaborn"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "scanpy"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
 
-        if not os.path.exists("scorect_api.py"):
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
+#        if not os.path.exists("scorect_api.py"):
+#            urllib.request.urlretrieve("https://raw.githubusercontent.com/LucasESBS/scoreCT/master/src/scorect_api.py", "scorect_api.py")
             # Required by scorect_api
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+#            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
 
         # Packages used but not included in scanpy package
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "harmonypy"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-misc"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "leidenalg"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "harmonypy"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-misc"])
+#        subprocess.check_call([sys.executable, "-m", "pip", "install", "leidenalg"])
 
         # Remove installer if it wasn't available before for discretion
-        if remove: os.remove("get-pip.py")
-        log("Succesfully installed packages")
+#        if remove: os.remove("get-pip.py")
+#        log("Succesfully installed packages")
 
         #Try importing packages again. If fail, proceed with normal crash protocol
-        print("Attempting to loading packages again. If failed to load, please install the package on your own or re-run program.")
-        import sys
-        import subprocess
-        import gzip
-        import hashlib
+#        print("Attempting to loading packages again. If failed to load, please install the package on your own or re-run program.")
+#        import sys
+#        import subprocess
+#        import gzip
+#        import hashlib
 
-        import numpy as np
-        import pandas as pd
-        import scanpy as sc
-        import seaborn as sb
-        import matplotlib.pyplot as plt
-        import scorect_api as ct
-        import openpyxl
-    print("Package import success!")
-    log("Successfully loaded packages")
+#        import numpy as np
+#        import pandas as pd
+#        import scanpy as sc
+#        import seaborn as sb
+#        import matplotlib.pyplot as plt
+#        import scorect_api as ct
+#        import openpyxl
+#    print("Package import success!")
+#    log("Successfully loaded packages")
 
     """Variables
     These will be default numbers if the user does not change these inputs. Much of these are variable throughout experiments so the defaults will be basic at best.
