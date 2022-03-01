@@ -7,11 +7,11 @@
 - [**Software used**](#software-used)
 - [**Cell Ranger**](#Cell Ranger)
   - **0. Directory Structure**
-  - **1. Cellranger Reference Transcriptome**
+  - **1. Cell Ranger Reference Transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
-    - [**1b. Cellranger mkgtf**](#1b-cellranger-mkgtf)
-    - [**1c. Cellranger mkref**](#1c-cellranger-mkref)
-  - **2. Cellranger Count Setup**
+    - [**1b. Cell Ranger mkgtf**](#1b-cellranger-mkgtf)
+    - [**1c. Cell Ranger mkref**](#1c-cellranger-mkref)
+  - **2. Cell Ranger Count Setup**
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cell Ranger count**](#2b-cellranger-count)
     - [**2c. Cell Ranger aggr**](#2c-cellranger-aggr)
@@ -84,7 +84,7 @@ Create a directory for your dataset with the GLDS number called GLDS-#. Within t
 
 Cell Ranger _count_ command uses FASTQ files to generate a cell by gene count matrix. 
 
-## 1. Cellranger Reference Transcriptome
+## 1. Cell Ranger Reference Transcriptome
 
 Cell Ranger _count_ requires a reference transcriptome. Below are instructions for creating a Cell Ranger reference transcriptome from a whole genome fasta (.fa) file and a Gene Transfer Format/GTF (.gtf) file. 
 
@@ -100,7 +100,7 @@ On EMSEMBL, the whole genome file is normally named as *.primary_assembly.fa. If
 
 ---
 
-### 1b Cellranger mkgtf
+### 1b Cell Ranger mkgtf
 
 (OPTIONAL) Before creating a reference transcriptome with _mkref_, we can use the Cell Ranger _mkgtf_ method to filter out annotated genes we might not need from the .gtf file. 
 
@@ -161,7 +161,7 @@ Output:
 
 ---
 
-### 1c Cellranger mkref
+### 1c Cell Ranger mkref
 
 Use Cell Ranger _mkref_ to create a reference transcriptome from a GTF file and a whole genome fasta file. If GeneLab already has an Ensembl RNAseq reference transcriptome for this organism, use those files.
 
