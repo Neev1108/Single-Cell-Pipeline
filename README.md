@@ -5,7 +5,7 @@
 # Table of contents
 
 - [**Software used**](#software-used)
-- [**Cell Ranger**](#Cell Ranger)
+- [**Cell Ranger**](#cell-ranger)
   - **0. Directory Structure**
   - **1. Cell Ranger Reference Transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
