@@ -9,12 +9,12 @@
   - **0. Directory Structure**
   - **1. Cell Ranger Reference Transcriptome**
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
-    - [**1b. Cell Ranger mkgtf**](#1b-cellranger-mkgtf)
-    - [**1c. Cell Ranger mkref**](#1c-cellranger-mkref)
+    - [**1b. Cell Ranger mkgtf**](#1b-cell-ranger-mkgtf)
+    - [**1c. Cell Ranger mkref**](#1c-cell-ranger-mkref)
   - **2. Cell Ranger Count Setup**
     - [**2a. Datasets**](#2a-datasets)
-    - [**2b. Cell Ranger count**](#2b-cellranger-count)
-    - [**2c. Cell Ranger aggr**](#2c-cellranger-aggr)
+    - [**2b. Cell Ranger count**](#2b-cell-ranger-count)
+    - [**2c. Cell Ranger aggr**](#2c-cell-ranger-aggr)
 - [**scRCT and annotate Python Script**](#scRCT-and-annotate-Python-Script)
   - [**1. Setup and Introduction**](#1-setup-and-introduction)
     - [**1a. Packages**](#1a-packages)
