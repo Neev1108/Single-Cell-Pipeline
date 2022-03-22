@@ -221,7 +221,7 @@ sbatch cellranger_count.slurm GLDS# Organism #ExpectedCellsPerSample
 After running Cell Ranger _count_, aggregate all samples together into a single cell by gene matrix using Cell Ranger _aggr_.
 
 ```
-sbatch cellranger_count.slurm GLDS# 
+sbatch cellranger_aggr.slurm GLDS# 
 ```
 
 **Parameter Definitions:**
