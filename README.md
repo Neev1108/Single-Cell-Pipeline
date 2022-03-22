@@ -6,12 +6,12 @@
 
 - [**Software used**](#software-used)
 - [**Cell Ranger**](#cell-ranger)
-  - **0. Directory Structure**
-  - **1. Cell Ranger Reference Transcriptome**
+  - [**0. Directory Structure**](#0-directory-structure)
+  - [**1. Cell Ranger Reference Transcriptome**](#1-cell-ranger-reference-transcriptome)
     - [**1a. ENSEMBL Files**](#1a-ensembl-files)
     - [**1b. Cell Ranger mkgtf**](#1b-cell-ranger-mkgtf)
     - [**1c. Cell Ranger mkref**](#1c-cell-ranger-mkref)
-  - **2. Cell Ranger Count Setup**
+  - [**2. Cell Ranger Count Setup**](#2-cell-ranger-count-setup)
     - [**2a. Datasets**](#2a-datasets)
     - [**2b. Cell Ranger count**](#2b-cell-ranger-count)
     - [**2c. Cell Ranger aggr**](#2c-cell-ranger-aggr)
