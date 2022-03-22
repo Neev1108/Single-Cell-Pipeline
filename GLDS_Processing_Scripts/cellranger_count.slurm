@@ -4,7 +4,7 @@
 #SBATCH --output=cellranger_out_logs/cellranger_%A_%a.out
 #SBATCH --partition=priority
 #SBATCH --mem=50000
-#SBATCH --array=1-16
+#SBATCH --array=1-16%2
 #SBATCH -c 80
 #SBATCH --mail-user=lauren.m.sanders@nasa.gov
 #SBATCH --mail-type=END
@@ -35,13 +35,13 @@ glds=$1
 organism=$2
 expectedCells=$3
 
-fastqDir=/global/scratch/lmsande2/scRNAseq/GLDS-$glds/00-Raw_Data/Fastq
+fastqDir=/global/data/Data_Processing/scRNAseq_Datasets/GLDS_Datasets/GLDS-$glds/00-RawData/Fastq
 # TODO: replace with permanent path to scRNAseq dir
 
-outDir=/global/scratch/lmsande2/scRNAseq/GLDS-$glds/01-CellRanger/CellRanger_Output
+outDir=/global/data/temp_scratch/lmsande2/scRNAseq/GLDS-$glds/01-CellRanger/CellRanger_Output
 # TODO: replace with permanent path to scRNAseq dir
 
-transcriptomePath=/global/scratch/lmsande2/scRNAseq/scRNAseq_Reference_Transcriptomes/ensemble_release101/$organism
+transcriptomePath=/global/data/temp_scratch/lmsande2/scRNAseq/scRNAseq_Reference_Transcriptomes/ensembl_release101/$organism
 # TODO: replace with permanent path to scRNAseq transcriptomes eg /global/data/Data_Processing/scRNAseq_Datasets/Reference_Transcriptomes/ensembl_release101
 
 # In SLURM array fashion, iterate through all the FASTQ files in the fastqDir
