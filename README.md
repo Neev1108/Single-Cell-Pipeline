@@ -88,8 +88,6 @@ Cell Ranger _count_ command uses FASTQ files to generate a cell by gene count ma
 
 Cell Ranger _count_ requires a reference transcriptome. Below are instructions for creating a Cell Ranger reference transcriptome from a whole genome fasta (.fa) file and a Gene Transfer Format/GTF (.gtf) file. 
 
-The example used is _Arabidopsis Thaliana_.
-
 ---
 
 ### 1a ENSEMBL files
@@ -104,60 +102,44 @@ On EMSEMBL, the whole genome file is normally named as *.primary_assembly.fa. If
 
 (OPTIONAL) Before creating a reference transcriptome with _mkref_, we can use the Cell Ranger _mkgtf_ method to filter out annotated genes we might not need from the .gtf file. 
 
-A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/filter_genes_mkgtf.slurm 
-
-Example script run:
 ```
 sbatch filter_genes_mkgtf.slurm  Arabidopsis_thaliana.TAIR10.51.gtf Arabidopsis_filtered.gtf
 ```
+
+**Parameter Definitions:**
+* `*.gtf` - the input GTF file 
+* `*filtered.gtf` - the output GTF file 
+
+**Input data:**
+* A GTF file 
+
+**Output data:**
+* A filtered GTF file
+
+
 
 This script runs the following command:
 
 ```
 cellranger mkgtf input.gtf output.gtf  --attribute=gene_biotype:protein_coding
+					--attribute=gene_biotype:protein_coding \
+					   --attribute=gene_biotype:lincRNA \
+					   --attribute=gene_biotype:antisense \
+					   --attribute=gene_biotype:IG_LV_gene \
+					   --attribute=gene_biotype:IG_V_gene \
+					   --attribute=gene_biotype:IG_V_pseudogene \
+					   --attribute=gene_biotype:IG_D_gene \
+					   --attribute=gene_biotype:IG_J_gene \
+					   --attribute=gene_biotype:IG_J_pseudogene \
+					   --attribute=gene_biotype:IG_C_gene \
+					   --attribute=gene_biotype:IG_C_pseudogene \
+					   --attribute=gene_biotype:TR_V_gene \
+					   --attribute=gene_biotype:TR_V_pseudogene \
+					   --attribute=gene_biotype:TR_D_gene \
+					   --attribute=gene_biotype:TR_J_gene \
+					   --attribute=gene_biotype:TR_J_pseudogene \
+					   --attribute=gene_biotype:TR_C_gene "
 ```
-
-Command parameters:
-
-* `--attribute` – Pass this parameter multiple times to filter out specific types of genes. An example is below.
-
-> --attribute=gene_biotype:protein_coding
->
-> --attribute=gene_biotype:lincRNA
->
-> --attribute=gene_biotype:antisense
->
-> --attribute=gene_biotype:IG_LV_gene
->
-> --attribute=gene_biotype:IG_V_gene
->
-> --attribute=gene_biotype:IG_V_pseudogene
->
-> --attribute=gene_biotype:IG_D_gene
->
-> --attribute=gene_biotype:IG_J_gene
->
-> --attribute=gene_biotype:IG_J_pseudogene
->
-> --attribute=gene_biotype:IG_C_gene
->
-> --attribute=gene_biotype:IG_C_pseudogene
->
-> --attribute=gene_biotype:TR_V_gene
->
-> --attribute=gene_biotype:TR_V_pseudogene
->
-> --attribute=gene_biotype:TR_D_gene
->
-> --attribute=gene_biotype:TR_J_gene
->
-> --attribute=gene_biotype:TR_J_pseudogene
->
-> --attribute=gene_biotype:TR_C_gene
-
-Output:
-
-- Filtered gtf file
 
 ---
 
@@ -165,185 +147,108 @@ Output:
 
 Use Cell Ranger _mkref_ to create a reference transcriptome from a GTF file and a whole genome fasta file. If GeneLab already has an Ensembl RNAseq reference transcriptome for this organism, use those files.
 
-A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/make_reference.slurm 
-
-Example script run: 
 ```
 sbatch make_reference.slurm Arabidopsis Araport/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa Arabidopsis_filtered.gtf
 ```
 
-This script runs the following command:
-```
-cellranger mkref --genome --fasta --genes
-```
+**Parameter Definitions:**
+* `*` The name of the output folder (e.g. "Arabidopsis")
+* `*.fa` - a whole genome fasta file
+* `*.gtf` - a GTF file
 
-Command parameters:
-* `--genome` – genome name
-* `--fasta` – path to fasta file with whole reference genome
-* `--genes` – path to gtf file
+**Input data:**
+* GTF file
+* Whole genome fasta file 
 
-Output:
-- fasta file
-- genes file
-- reference.json
-- STAR index folder (most important)
-
-
-We now have a folder called Arabidopsis which is our reference transcriptome.
+**Output data:**
+* *output_folder*/reference.json  
+* *output_folder*/fasta/genome.fa
+* *output_folder*/fasta/genome.fa.fai
+* *output_folder*/genes/genes.gtf.gz
+* *output_folder*/star (directory with STAR index)
 
 Place this folder in the GeneLab scRNAseq Reference Transcriptome folder.
 
 ## 2. Cellranger Count Setup
 
-The next step is to use Cell Ranger _count_ to make a cells by genes counts matrix of our dataset.
+The next step is to use Cell Ranger _count_ to make a cells by genes counts matrix.
 
 ### 2a Datasets
 
 Place your FASTQ files into the GLDS-#/00-Raw_Data directory. *Do not place any other files into this directory.*
 
-Cell Ranger requires FASTQ file names to follow the bcl2fastq file naming convention:
-
-[Sample Name]_S1_L00[Lane Number]_[Read Type]_001.fastq.gz
-
-Where Read Type is one of:
-
-- R1: Read 1
-- R2: Read 2
-
-For example: 
-
-- An acceptable FASTQ file name: GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw_S1_L001_R1_001.fastq.gz
-
-- What Cell Ranger thinks the "sample name" is: "GLDS-402_scRNA-Seq_RRRM2_Femur_BM_FLT_LAR_OLD_FO1_raw"
-
-<details>
-  <summary>Example using SRA data</summary>
-
-	If downloading a dataset from NCBI using SRA, then please first check if the data access has a BAM file. If it does, you can use cellrangers bamtofastq 	function. Most datasets do not, so we will not discuss this function.
-
-	A quick explanation of how SRA accession IDS and numbers compare to Cellrangers definitions:
-
-	> SRR IDs are run accessions, and the fastq files will normally have 2 fastq files, a read1 and a read 2.
-	>
-	> SRX IDS are experiment accessions, and they correspond to the libraries in cellranger.
-	>
-	> SRS IDs are sample accessions, and they correspond to cell samples in cellranger.
-	>
-	> SRP IDs are study accessions, and they can contain multiple organisms.
-
-	.SRA files downloaded will need to be extracted into fastq files using this function from SRA toolkit:
-
-	```
-	fastq-dump --split-files SRR6334436
-	```
-
-	which will output 2 files:
-
-	- SRR6334436_1.fastq
-	- SRR6334436_2.fastq
-
-	These will need to be renamed as shown above.
-
-	The final file structure for the fastq files will look like below (this is for Arabidopsis):
-
-	> Arabidopsis_dataset
-	>
-	> ├── SRR13040579_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040579_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040580_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040580_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040581_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040581_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040582_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040582_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040583_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040583_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040584_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040584_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040585_S1_L001_R1_001.fastq.gz
-	>
-	> ├── SRR13040585_S1_L001_R2_001.fastq.gz
-	>
-	> ├── SRR13040586_S1_L001_R1_001.fastq.gz
-	>
-	> └── SRR13040586_S1_L001_R2_001.fastq.gz
-	
-</details>
-
 ### 2b Cell Ranger count
 
-Once you have a Cell Ranger reference transcriptome file, and properly named FASTQ files, run Cell Ranger _count_ to generate a cells by genes counts matrix for each individual sample.
+Run Cell Ranger _count_ to generate a cells by genes counts matrix for each individual sample.
 
-A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/cellranger_count.slurm 
-
-Example script run:
 ```
 sbatch cellranger_count.slurm GLDS# Organism #ExpectedCellsPerSample
-sbatch cellranger_count.slurm 402 Mus_musculus 8000
-```
-NOTE: the "Organism" attribute must match the formatting of the reference transcriptome folder's name.
-
-This script runs the following command on each FASTQ file in the /00-Raw_Data directory.
-```
-cellranger count --id --transcriptome --fastqs --sample --expect-cells --localcores --localmem
 ```
 
-Command parameters:
-* `--id` – A string id of the job. This is automatically derived from each sample name.
-* `--transcriptome` – path to the reference transcriptome directory. This is automatically derived from the organism name.
-* `--fastqs` – path to fastqs directory. This is automatically derived from each sample name.
-* `--sample` – name of sample to run. The SLURM script iterates through all FASTQ files in the directory.
-* `--expected-cells` – an optimal parameter if number of cells is known beforehand. Default is 3000 cells.
-* `--localcores` – number of cores to run the job. Automatically set to 78.
-* `--localmem` – amount of local memory for the job. Overridden by settings in the SLURM script.
+**Parameter Definitions:**
+* `GLDS#` - the GLDS number (e.g. "402")
+* `Organism` - the sample organism, which must match the formatting of the reference transcriptome folder's name (e.g. "Arabidopsis").
+* `#ExpectedCellsPerSample` - the number of expected cells per sample (e.g. "8000"; NOTE: this will eventually be sourced from GeneLab metadata).
 
-The output for each sample can be found in ```01-CellRanger/CellRanger_Output``` in a folder named for that sample.
-- web summary
-- metrics summary in csv format
-- possorted_genome_bam file (this will be the majority of the file size, might be upwards of 5gb)
-- filtered_feature_bc_matrix (this will be the most important for our Scanpy analysis)
-- raw feature matrix
-- analysis (some cellranger specific analysis, can be used to validate and test some scanpy downstream analysis)
-- cloupe file (a file to see visualization on cellranger's cloupe software)
+**Input data:**
+* GLDS-#/00-RawData/*fastq.gz (each FASTQ file is run individually)
 
-This script also automatically generates a CSV file in ``01-CellRanger/CellRanger_Output``` called "GLDS-#_aggr_CSV.csv" which is used for running [**2c. Cell Ranger aggr**](#2c-cellranger-aggr).
+**Output data:**
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_cmdline
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_filelist
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_finalstate
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_invocation
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_jobmode
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_log
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_mrosource
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_perf
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/*.mri.tgz
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/SC_RNA_COUNTER_CS (directory with Cell Ranger run info)
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_sitecheck
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_tags
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_timestamp
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_uuid
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_vdrkill
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/_versions
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/outs/ (directory with feature barcode matrix)
 
 
 ---
 
 ### 2c Cell Ranger aggr
 
-After running Cell Ranger _count_, you can aggregate all samples together into a single cell by gene matrix using Cell Ranger _aggr_.
+After running Cell Ranger _count_, aggregate all samples together into a single cell by gene matrix using Cell Ranger _aggr_.
 
-A SLURM script for running this command is here: /Single-Cell-Pipeline/Scripts/cellranger_aggr.slurm 
-
-Example script run:
 ```
 sbatch cellranger_count.slurm GLDS# 
-sbatch cellranger_count.slurm 402 
 ```
 
-This script runs the following command:
-```
-cellranger aggr --id --csv --nosecondary
-```
+**Parameter Definitions:**
+* `GLDS#` - the GLDS number (e.g. "402")
 
-Command parameters:
-* `--id` – A string id of the job. This is automatically derived from each sample name.
-* `--csv` – path to a CSV file with paths to the Cell Ranger _count_ outputs from each FASTQ. This is automatically generated by the cellranger_count.slurm script.
-* `--nosecondary` – a flag to skip Cell Ranger secondary analysis.
+**Input data: (for each sample)**
+* GLDS-#/01-CellRanger/CellRanger_Output/*sample*/outs/molecule_info.h5
+* A CSV file with paths to the Cell Ranger _count_ outputs from each FASTQ. This is automatically generated within this script.
+
+**Output data:**
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_cmdline
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_filelist
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_finalstate
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/GLDS-402-AGGR.mri.tgz
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_invocation
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_jobmode
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_log
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_mrosource
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/outs (directory with feature barcode matrix)
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_perf
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/SC_RNA_AGGREGATOR_CS (directory with Cell Ranger run info)
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_sitecheck
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_tags
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_timestamp
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_uuid
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_vdrkill
+* GLDS-#/01-CellRanger/CellRanger_Output/GLDS-#-AGGR/_versions
 
 
 Outputs: 
